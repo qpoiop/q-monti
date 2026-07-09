@@ -1,6 +1,13 @@
 import { useSyncExternalStore } from "react";
 import { momontyGame } from "@shared/games/momonty/logic";
-import type { MomontyAction, MomontyState, MomontyView } from "@shared/games/momonty/logic";
+import type {
+  Card,
+  MomontyAction,
+  MomontyState,
+  MomontyView,
+  Rank,
+  TrickForm,
+} from "@shared/games/momonty/logic";
 import { makeRng, type Seat } from "@shared/engine";
 
 /**
@@ -27,6 +34,12 @@ export interface TestState {
   version: number;
   actingSeatId: string;
   seatNames: Record<string, string>;
+  /**
+   * When true, every dispatch drains autonomous turns for seats that
+   * aren't the current viewer. Lets a single tester walk the full match
+   * without needing to hand-play every bot.
+   */
+  autoBots: boolean;
 }
 
 let current: TestState | null = null;
@@ -62,7 +75,14 @@ export function initTest(opts: { seatCount?: number; config?: any } = {}): void 
     version: 1,
     actingSeatId: state.seatOrder[0],
     seatNames: Object.fromEntries(seats.map((s) => [s.seatId, s.displayName])),
+    autoBots: true,
   };
+  notify();
+}
+
+export function setAutoBots(on: boolean): void {
+  if (!current) return;
+  current = { ...current, autoBots: on };
   notify();
 }
 
@@ -103,12 +123,27 @@ export function testDispatch(
         : current.actingSeatId;
 
     // Shallow copy state so React notices the change.
+    let mergedState = state;
+    let mergedEvents: unknown[] = events;
+    let actingAfter = nextActing;
+    if (current.autoBots) {
+      // Human = whoever just dispatched. Drain autonomous turns for
+      // every other seat until the flow needs the human's input again.
+      const drained = drainBotTurns(
+        mergedState,
+        current.actingSeatId,
+        current.version + 1
+      );
+      mergedState = drained.state;
+      mergedEvents = [...mergedEvents, ...drained.events];
+      actingAfter = drained.actingSeatId;
+    }
     current = {
       ...current,
-      state: { ...state },
-      events,
+      state: { ...mergedState },
+      events: mergedEvents,
       version: current.version + 1,
-      actingSeatId: nextActing,
+      actingSeatId: actingAfter,
     };
     notify();
     // Mirror to the global store so shared overlays that read
@@ -120,6 +155,176 @@ export function testDispatch(
     return { ok: false, error: (e as Error).message };
   }
 }
+
+/**
+ * Runs autonomous actions for whichever seat currently needs to act,
+ * as long as it isn't the viewer's seat. Uses a deliberately naive bot
+ * policy — the goal is to keep the round moving so the tester can see
+ * end-to-end transitions, not to play well. Straights are skipped.
+ */
+function drainBotTurns(
+  startState: MomontyState,
+  humanSeatId: string,
+  baseVersion: number
+): { state: MomontyState; events: unknown[]; actingSeatId: string } {
+  let state = startState;
+  const events: unknown[] = [];
+  let acting = humanSeatId;
+  // Guard against unexpected infinite loops.
+  for (let step = 0; step < 200; step++) {
+    if (state.phase === "MATCH_END") break;
+    const activeSeat = seatToDrive(state, humanSeatId);
+    if (!activeSeat || activeSeat === humanSeatId) {
+      // Return control to the human seat once the flow needs their input.
+      acting = seatToDrive(state, humanSeatId) ?? humanSeatId;
+      break;
+    }
+    const bot = botAction(state, activeSeat);
+    if (!bot) {
+      acting = activeSeat;
+      break;
+    }
+    const rng = makeRng(`test:bot:${baseVersion}:${step}:${activeSeat}`);
+    try {
+      const result = momontyGame.reduce({
+        state,
+        seatId: activeSeat,
+        action: bot,
+        rng,
+      });
+      state = result.state;
+      for (const e of result.events) events.push(e);
+    } catch (e) {
+      // Bot picked an illegal move — fall back to pass, and if that also
+      // fails, hand control back to the human.
+      try {
+        const rng2 = makeRng(`test:botpass:${baseVersion}:${step}:${activeSeat}`);
+        const result = momontyGame.reduce({
+          state,
+          seatId: activeSeat,
+          action: { t: "pass" },
+          rng: rng2,
+        });
+        state = result.state;
+        for (const e of result.events) events.push(e);
+      } catch {
+        acting = activeSeat;
+        break;
+      }
+    }
+  }
+  return { state, events, actingSeatId: acting };
+}
+
+function seatToDrive(state: MomontyState, humanSeatId: string): string | null {
+  if (state.phase === "PLAYING") return state.seatOrder[state.currentSeatIdx] ?? null;
+  if (state.phase === "TAXATION") {
+    for (const s of state.seatOrder) {
+      if ((state.taxation.pendingUploads[s] ?? 0) > 0) return s;
+      if ((state.taxation.pendingReturns[s] ?? 0) > 0) return s;
+    }
+    return null;
+  }
+  if (state.phase === "DRAWING_RANK") {
+    for (const s of state.seatOrder) {
+      if (state.drawRank?.picks?.[s] == null) return s;
+    }
+    return null;
+  }
+  if (state.phase === "RANK_REVEAL" || state.phase === "ROUND_END") return humanSeatId;
+  return null;
+}
+
+function botAction(state: MomontyState, seatId: string): MomontyAction | null {
+  if (state.phase === "DRAWING_RANK") return { t: "drawRank" };
+  if (state.phase === "TAXATION") {
+    const hand = state.hands[seatId] ?? [];
+    const owe = state.taxation.pendingUploads[seatId] ?? 0;
+    if (owe > 0) {
+      // Peon uploads their strongest (lowest value) numbered cards.
+      const sorted = [...hand]
+        .filter((c) => c.value != null)
+        .sort((a, b) => (a.value ?? 99) - (b.value ?? 99));
+      const picked = sorted.slice(0, owe);
+      if (picked.length < owe) return null;
+      return { t: "uploadCards", cardIds: picked.map((c) => c.id) };
+    }
+    const owed = state.taxation.pendingReturns[seatId] ?? 0;
+    if (owed > 0) {
+      // Momonty returns their weakest (highest value) numbered cards, and
+      // wilds only when nothing else fits.
+      const numbered = [...hand]
+        .filter((c) => c.value != null)
+        .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+      const wilds = hand.filter((c) => c.value == null);
+      const picked = [...numbered, ...wilds].slice(0, owed);
+      if (picked.length < owed) return null;
+      return { t: "returnCards", cardIds: picked.map((c) => c.id) };
+    }
+    return null;
+  }
+  if (state.phase === "PLAYING") {
+    const hand = state.hands[seatId] ?? [];
+    const form = state.currentTrick.form;
+    if (form.kind === "none") return leadWeakest(hand);
+    if (form.kind === "straight") return { t: "pass" };
+    return followWithSet(hand, form);
+  }
+  return null;
+}
+
+function leadWeakest(hand: Card[]): MomontyAction | null {
+  const numbered = hand.filter((c) => c.value != null) as (Card & { value: number })[];
+  if (numbered.length === 0) return { t: "pass" };
+  // Weakest = highest value (1 is the strongest).
+  const byVal = new Map<number, Card[]>();
+  for (const c of numbered) {
+    const arr = byVal.get(c.value) ?? [];
+    arr.push(c);
+    byVal.set(c.value, arr);
+  }
+  let best: { v: number; cards: Card[] } | null = null;
+  for (const [v, cards] of byVal.entries()) {
+    if (!best || v > best.v || (v === best.v && cards.length > best.cards.length)) {
+      best = { v, cards };
+    }
+  }
+  if (!best) return { t: "pass" };
+  return { t: "playCards", cardIds: best.cards.map((c) => c.id), wildAsValue: best.v };
+}
+
+function followWithSet(hand: Card[], form: TrickForm): MomontyAction {
+  const size =
+    form.kind === "single" ? 1 :
+    form.kind === "pair" ? 2 :
+    form.kind === "triple" ? 3 :
+    form.kind === "quad" ? 4 : 0;
+  const threshold = "value" in form ? form.value : 0;
+  const jesters = hand.filter((c) => c.value == null);
+  const byValue = new Map<number, Card[]>();
+  for (const c of hand) {
+    if (c.value == null) continue;
+    const arr = byValue.get(c.value) ?? [];
+    arr.push(c);
+    byValue.set(c.value, arr);
+  }
+  const candidates: { v: number; cards: Card[] }[] = [];
+  for (const [v, cs] of byValue.entries()) {
+    if (v >= threshold) continue;
+    if (cs.length >= size) {
+      candidates.push({ v, cards: cs.slice(0, size) });
+    } else if (cs.length + jesters.length >= size) {
+      const need = size - cs.length;
+      candidates.push({ v, cards: [...cs, ...jesters.slice(0, need)] });
+    }
+  }
+  candidates.sort((a, b) => b.v - a.v);
+  if (candidates.length === 0) return { t: "pass" };
+  const pick = candidates[0];
+  return { t: "playCards", cardIds: pick.cards.map((c) => c.id), wildAsValue: pick.v };
+}
+// Keep Rank import from tree-shaking away — used for narrowing above.
+type _RankUsed = Rank;
 
 export function setActingSeat(seatId: string): void {
   if (!current) return;
@@ -172,5 +377,6 @@ function emptyState(): TestState {
     version: 0,
     actingSeatId: "",
     seatNames: {},
+    autoBots: true,
   };
 }

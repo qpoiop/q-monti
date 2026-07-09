@@ -85,12 +85,13 @@ export function HistorySheet() {
   }
 
   const rows = tab === "trick" ? playsThisTrick : tab === "round" ? playsThisRound : [];
-  const totalDealt = view.config.cardMax * view.config.copiesPerValue;
+  const sets = Math.max(1, view.config.cardSets);
+  const totalDealt = ((view.config.cardMax * (view.config.cardMax + 1)) / 2) * sets;
   const remainingByValue = new Map<number, number>();
   for (let v = 1; v <= view.config.cardMax; v++) {
-    remainingByValue.set(v, view.config.copiesPerValue);
+    remainingByValue.set(v, v * sets);
   }
-  let jestersRemaining = view.config.jesters;
+  let jestersRemaining = view.config.jestersPerSet * sets;
   for (const p of playsThisRound) {
     for (const c of p.cards) {
       if (c.value == null) jestersRemaining -= 1;
@@ -157,7 +158,7 @@ export function HistorySheet() {
                 </span>
               </div>
               <div className="history-count-total">
-                덱 총 {totalDealt + view.config.jesters}장 · 남은 조합 참고
+                덱 총 {totalDealt + view.config.jestersPerSet * sets}장 · 남은 조합 참고
               </div>
             </div>
           ) : rows.length === 0 ? (

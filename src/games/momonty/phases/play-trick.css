@@ -27,20 +27,29 @@
   gap: 12px;
   padding: 0 2px;
 }
-.history-chip {
-  align-self: flex-end;
-  padding: 5px 10px;
+.pile {
+  position: relative;
+}
+.pile-history-chip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 9px;
   border-radius: 999px;
-  background: rgba(242, 193, 78, 0.14);
-  border: 1px solid rgba(242, 193, 78, 0.32);
+  background: rgba(242, 193, 78, 0.16);
+  border: 1px solid rgba(242, 193, 78, 0.34);
   color: #f8d98a;
+  font-family: var(--font-brand);
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;
-  margin-top: -6px;
+  z-index: 2;
 }
-.history-chip:hover {
-  background: rgba(242, 193, 78, 0.2);
+.pile-history-chip:hover {
+  background: rgba(242, 193, 78, 0.24);
+}
+.pile-history-chip:active {
+  transform: scale(0.97);
 }
 .turn-pill {
   display: inline-flex;
@@ -74,8 +83,8 @@
 /* Timer ring — conic-gradient pie clipped to a circle. Percentage
  * driven by a CSS custom property so the countdown can animate. */
 .timer-ring {
-  width: 40px;
-  height: 40px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: conic-gradient(
     var(--accent-1) calc(var(--timer-pct, 1) * 360deg),
@@ -89,29 +98,29 @@
   transition: background var(--dur-fast) linear;
 }
 .timer-ring-inner {
-  width: 32px;
-  height: 32px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   background: var(--surface-1);
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
-  gap: 0;
+  gap: 2px;
   color: #fff;
   font-family: var(--font-brand);
   font-weight: 800;
-  overflow: hidden;
 }
 .timer-value {
-  font-size: 12px;
+  font-size: 16px;
   line-height: 1;
   letter-spacing: -0.02em;
 }
 .timer-unit {
-  font-size: 7px;
-  opacity: 0.6;
+  font-size: 10px;
+  opacity: 0.7;
   line-height: 1;
-  margin-left: 1px;
+  align-self: flex-end;
+  margin-bottom: 2px;
 }
 .timer-ring.expired {
   background: conic-gradient(var(--neg-1) 360deg, transparent 0);
@@ -127,11 +136,14 @@
  *   count Outfit 700 11 #f2c14e — format "🂠9"
  */
 .opp-strip {
-  display: flex;
+  /* Grid — always 4 per row; extra seats wrap to a second row. Keeps
+   * every cell the same width regardless of participant count so 5-8p
+   * layouts don't cram everything onto one line. */
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 5px;
 }
 .opp-cell {
-  flex: 1;
   min-width: 0;
   text-align: center;
   padding: 6px 0;

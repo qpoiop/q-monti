@@ -20,9 +20,16 @@ import "./test.css";
 
 /**
  * Test mode — two stages:
- *   1. Setup: config form (tabs: 기본 룰 / 고급 효과) → 테스트 시작.
+ *   1. Setup: config form (tabs: 기본 룰 / 고급 룰) → 테스트 시작.
  *   2. Play: standard phase views + seat picker.
  */
+
+function perSetTotal(cfg: {
+  cardMax: number;
+  jestersPerSet: number;
+}): number {
+  return (cfg.cardMax * (cfg.cardMax + 1)) / 2 + cfg.jestersPerSet;
+}
 export function TestScreen() {
   const started = useTest((s) => s.state != null);
   return started ? <TestPlay /> : <TestSetup />;
@@ -77,7 +84,7 @@ function TestSetup() {
             className={`setup-tab ${tab === "advanced" ? "active" : ""}`}
             onClick={() => setTab("advanced")}
           >
-            고급 효과 →
+            고급 룰 →
           </button>
         </div>
         <ScreenBody>
@@ -98,7 +105,7 @@ function TestSetup() {
               </div>
               <SettingRow
                 label="덱 구성"
-                hint={`1~${config.cardMax} 각 ${config.copiesPerValue}장 + 광대 ${config.jesters}`}
+                hint={`1은 1장 · 2는 2장 · … · ${config.cardMax}은 ${config.cardMax}장 + 광대 ${config.jestersPerSet} (1세트)`}
                 right={
                   <span
                     style={{
@@ -108,19 +115,19 @@ function TestSetup() {
                       fontSize: 14,
                     }}
                   >
-                    {config.cardMax * config.copiesPerValue + config.jesters}장
+                    {perSetTotal(config) * Math.max(1, config.cardSets)}장
                   </span>
                 }
               />
               <SettingRow
                 label="카드 세트 수"
-                hint="숫자별 장수 · 인원 많을수록 증가 추천"
+                hint="4인 이하는 1세트가 기본 · 인원 많으면 2세트"
                 right={
                   <Stepper
-                    value={config.copiesPerValue}
-                    min={4}
-                    max={8}
-                    onChange={(v) => set({ copiesPerValue: v })}
+                    value={config.cardSets}
+                    min={1}
+                    max={3}
+                    onChange={(v) => set({ cardSets: v })}
                   />
                 }
               />

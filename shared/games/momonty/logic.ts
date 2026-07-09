@@ -30,8 +30,15 @@ import type { GameEvent, GameModule, Rng, Seat } from "../../engine";
 export interface MomontyConfig {
   playerCount: number;
   cardMax: number;
-  copiesPerValue: number;
-  jesters: number;
+  /**
+   * Triangular deck sets. Each set has 1×(value 1) + 2×(value 2) + …
+   * + N×(value cardMax) + `jestersPerSet` jesters. Total per set is
+   * `cardMax*(cardMax+1)/2 + jestersPerSet` (80 for cardMax=12 with
+   * 2 jesters). 4 seats or fewer use 1 set by default; larger tables
+   * bump this to 2.
+   */
+  cardSets: number;
+  jestersPerSet: number;
   taxationEnabled: boolean;
   /** Revolution is dependent on taxation — the setup UI enforces this. */
   revolutionEnabled: boolean;
@@ -49,8 +56,8 @@ export interface MomontyConfig {
 export const defaultConfig: MomontyConfig = {
   playerCount: 6,
   cardMax: 12,
-  copiesPerValue: 6,
-  jesters: 2,
+  cardSets: 1,
+  jestersPerSet: 2,
   taxationEnabled: true,
   revolutionEnabled: true,
   greatRevolutionEnabled: false,
@@ -183,15 +190,21 @@ export type MomontyAction =
 /* -------------------------- Helpers -------------------------- */
 
 function buildDeck(cfg: MomontyConfig): Card[] {
+  // Triangular: value V appears V copies per set (1 has 1 copy, 12 has
+  // 12), plus jestersPerSet jesters per set. Standard set (cardMax=12,
+  // jestersPerSet=2) totals 12*13/2 + 2 = 80 cards.
   const out: Card[] = [];
   let seq = 0;
-  for (let v = 1; v <= cfg.cardMax; v++) {
-    for (let c = 0; c < cfg.copiesPerValue; c++) {
-      out.push({ id: `c${seq++}`, value: v });
+  const sets = Math.max(1, cfg.cardSets);
+  for (let s = 0; s < sets; s++) {
+    for (let v = 1; v <= cfg.cardMax; v++) {
+      for (let c = 0; c < v; c++) {
+        out.push({ id: `c${seq++}`, value: v });
+      }
     }
-  }
-  for (let j = 0; j < cfg.jesters; j++) {
-    out.push({ id: `j${seq++}`, value: null });
+    for (let j = 0; j < cfg.jestersPerSet; j++) {
+      out.push({ id: `j${seq++}`, value: null });
+    }
   }
   return out;
 }

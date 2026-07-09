@@ -23,7 +23,6 @@ import "./play-trick.css";
  *     handle actual forfeit).
  */
 
-const TURN_LIMIT = 15;
 const EMPTY_EVENTS_ARR: unknown[] = [];
 type SortMode = "asc" | "desc" | "group";
 
@@ -320,18 +319,9 @@ export function PlayTrick({ view }: { view: MomontyView }) {
         isLeading={isLeading}
         myTurn={myTurn}
         seatKey={view.currentSeatId ?? ""}
+        limitSec={view.config.turnLimitSec}
         onTimeout={canPass && myTurn ? doPass : undefined}
       />
-      <button
-        type="button"
-        className="history-chip"
-        onClick={() =>
-          window.dispatchEvent(new CustomEvent("momonti:history:open"))
-        }
-      >
-        📜 히스토리
-      </button>
-
       <OpponentStrip view={view} />
 
       {requirementText ? <div className="req-pill">{requirementText}</div> : null}
@@ -447,28 +437,29 @@ function PlayHeader({
   isLeading,
   myTurn,
   seatKey,
+  limitSec,
   onTimeout,
 }: {
   isLeading: boolean;
   myTurn: boolean;
   seatKey: string;
+  limitSec: number;
   onTimeout?: () => void;
 }) {
-  const [remaining, setRemaining] = useState(TURN_LIMIT);
+  const limit = Math.max(5, Math.floor(limitSec));
+  const [remaining, setRemaining] = useState(limit);
   const seatRef = useRef(seatKey);
   const firedRef = useRef(false);
   useEffect(() => {
-    if (seatRef.current !== seatKey) {
-      seatRef.current = seatKey;
-      firedRef.current = false;
-      setRemaining(TURN_LIMIT);
-    }
+    // Reset on turn change (seat) OR when the limit itself changes.
+    seatRef.current = seatKey;
+    firedRef.current = false;
+    setRemaining(limit);
     const id = setInterval(() => {
       setRemaining((r) => {
         if (r <= 1) {
           if (!firedRef.current && onTimeout) {
             firedRef.current = true;
-            // Defer so React sees zero first.
             queueMicrotask(onTimeout);
           }
           return 0;
@@ -477,8 +468,8 @@ function PlayHeader({
       });
     }, 1000);
     return () => clearInterval(id);
-  }, [seatKey, onTimeout]);
-  const pct = remaining / TURN_LIMIT;
+  }, [seatKey, limit, onTimeout]);
+  const pct = remaining / limit;
   const expired = remaining === 0;
   return (
     <div className="play-header">
@@ -534,12 +525,26 @@ function OpponentStrip({ view }: { view: MomontyView }) {
 function EmptyPile() {
   return (
     <div className="pile pile-empty">
+      <HistoryPileChip />
       <span className="pile-empty-icon" aria-hidden>
         🂠
       </span>
       <span className="pile-empty-title">공유더미 비어 있음</span>
       <span className="pile-empty-hint">아무 세트나 리드할 수 있어요</span>
     </div>
+  );
+}
+
+function HistoryPileChip() {
+  return (
+    <button
+      type="button"
+      className="pile-history-chip"
+      onClick={() => window.dispatchEvent(new CustomEvent("momonti:history:open"))}
+      aria-label="더미 히스토리 열기"
+    >
+      📜 히스토리
+    </button>
   );
 }
 
@@ -560,6 +565,7 @@ function PileBox({
   const remaining = Math.max(0, activeSeats - passCount - 1);
   return (
     <div className="pile pile-active">
+      <HistoryPileChip />
       <div className="pile-head">
         <span className="pile-head-label">공유더미 · 현재 최고</span>
         <span className="pile-head-actor">{from} · 방금 냄</span>
