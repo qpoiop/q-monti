@@ -1,6 +1,6 @@
 import { PhoneFrame } from "@web/design/PhoneFrame";
 import { BottomBar, Button, Card, ScreenHeader } from "@web/design/primitives";
-import { send, useStore } from "@web/state/store";
+import { leaveRoom, useStore } from "@web/state/store";
 import { navigate } from "@web/nav/router";
 import { DesktopStage } from "./DesktopStage";
 
@@ -44,7 +44,7 @@ export function ResultScreen() {
             full
             variant="ghost"
             onClick={() => {
-              send({ t: "leaveRoom" });
+              leaveRoom();
               navigate({ name: "home" });
             }}
           >

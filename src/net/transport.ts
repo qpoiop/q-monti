@@ -1,23 +1,25 @@
 import type { C2S, S2C } from "@shared/protocol";
 
 /**
- * Lightweight WS transport.
+ * Room-scoped WebSocket transport.
  *
  * Contract:
- *   - Single durable connection to `/ws?session=…`.
- *   - Automatic reconnect with backoff (1s, 2s, 4s, capped at 8s).
+ *   - No connection until we know a room code. `connect(code)` opens the WS
+ *     directly to that room's Durable Object via `/ws?code=…&session=…`.
+ *   - Automatic reconnect with backoff (1s, 2s, 4s, capped at 8s) while a
+ *     code is still armed. `close()` clears the code and stops reconnects.
  *   - Session ID persisted in localStorage so re-connects rejoin the same
- *     player identity — the DO uses `sessionId` as the user key.
- *   - Consumers subscribe via `onMessage`.
+ *     seat — the DO uses `sessionId` as the user identity key.
  *
- * The transport is state-agnostic. Higher-level `store` reduces S2C into UI
- * state. This keeps the transport reusable across games.
+ * Pre-room actions (createRoom / lookupRoom) are HTTP JSON endpoints on the
+ * worker — see `api.newRoom` and `api.lookup`.
  */
 
 export type Listener = (msg: S2C) => void;
 export type StatusListener = (s: TransportStatus) => void;
 
 export type TransportStatus =
+  | { kind: "idle" }
   | { kind: "connecting" }
   | { kind: "connected" }
   | { kind: "reconnecting"; attempt: number }
@@ -47,25 +49,36 @@ export function setDisplayName(name: string): void {
   localStorage.setItem(KEY_NAME, name);
 }
 
+interface HelloOpts {
+  seedMeta?: { roomName?: string; isPrivate?: boolean; maxPlayers?: number };
+}
+
 export class Transport {
   private ws: WebSocket | null = null;
   private msgListeners: Listener[] = [];
   private statusListeners: StatusListener[] = [];
   private reconnectAttempt = 0;
-  private closedByUser = false;
+  private armedCode: string | null = null;
+  private pendingHello: HelloOpts = {};
   private pending: C2S[] = [];
-  private lastStatus: TransportStatus = { kind: "connecting" };
+  private lastStatus: TransportStatus = { kind: "idle" };
 
-  constructor(private readonly wsUrl: string) {}
-
-  connect(): void {
-    this.closedByUser = false;
+  connect(code: string, helloOpts: HelloOpts = {}): void {
+    this.armedCode = code;
+    this.pendingHello = helloOpts;
+    this.reconnectAttempt = 0;
     this.open();
   }
 
   close(): void {
-    this.closedByUser = true;
-    this.ws?.close();
+    this.armedCode = null;
+    this.pending = [];
+    try {
+      this.ws?.close();
+    } catch {
+      /* ignore */
+    }
+    this.setStatus({ kind: "idle" });
   }
 
   send(msg: C2S): void {
@@ -96,24 +109,25 @@ export class Transport {
   }
 
   private open(): void {
+    if (!this.armedCode) return;
     this.setStatus(
       this.reconnectAttempt === 0
         ? { kind: "connecting" }
         : { kind: "reconnecting", attempt: this.reconnectAttempt }
     );
-    const ws = new WebSocket(this.wsUrl);
+    const ws = new WebSocket(buildWsUrl(this.armedCode));
     this.ws = ws;
     ws.onopen = () => {
       this.reconnectAttempt = 0;
       this.setStatus({ kind: "connected" });
-      // Say hello first.
       const hello: C2S = {
         t: "hello",
         sessionId: getSessionId(),
         displayName: getDisplayName(),
+        seedMeta: this.pendingHello.seedMeta,
       };
       ws.send(JSON.stringify(hello));
-      // Flush queue.
+      this.pendingHello = {};
       for (const q of this.pending) ws.send(JSON.stringify(q));
       this.pending = [];
     };
@@ -127,7 +141,7 @@ export class Transport {
     };
     ws.onclose = (ev) => {
       this.setStatus({ kind: "closed", reason: ev.reason });
-      if (this.closedByUser) return;
+      if (!this.armedCode) return;
       this.reconnectAttempt = Math.min(this.reconnectAttempt + 1, 5);
       const delay = Math.min(1000 * 2 ** (this.reconnectAttempt - 1), 8000);
       setTimeout(() => this.open(), delay);
@@ -138,12 +152,34 @@ export class Transport {
   }
 }
 
-export function buildWsUrl(): string {
+function apiOrigin(): string {
+  return (import.meta.env.VITE_API_ORIGIN as string) || "";
+}
+
+export function buildWsUrl(code: string): string {
   const override = import.meta.env.VITE_WS_URL as string | undefined;
   if (override) {
-    const sep = override.includes("?") ? "&" : "?";
-    return `${override}${sep}session=${encodeURIComponent(getSessionId())}`;
+    return `${override}${override.includes("?") ? "&" : "?"}code=${encodeURIComponent(code)}&session=${encodeURIComponent(getSessionId())}`;
   }
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
-  return `${proto}//${location.host}/ws?session=${encodeURIComponent(getSessionId())}`;
+  const host = apiOrigin() ? new URL(apiOrigin()).host : location.host;
+  return `${proto}//${host}/ws?code=${encodeURIComponent(code)}&session=${encodeURIComponent(getSessionId())}`;
 }
+
+/** HTTP helpers for pre-room actions. */
+export const api = {
+  async newRoom(gameId: string): Promise<{ code: string }> {
+    const res = await fetch(`${apiOrigin()}/api/newRoom`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ gameId }),
+    });
+    if (!res.ok) throw new Error(`newRoom ${res.status}`);
+    return res.json();
+  },
+  async lookup(code: string): Promise<{ name: string | null }> {
+    const res = await fetch(`${apiOrigin()}/api/lookup?code=${encodeURIComponent(code)}`);
+    if (!res.ok) throw new Error(`lookup ${res.status}`);
+    return res.json();
+  },
+};

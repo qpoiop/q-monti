@@ -11,7 +11,7 @@ import {
   Toggle,
 } from "@web/design/primitives";
 import { getGame } from "@shared/games/registry";
-import { send, setName, useStore } from "@web/state/store";
+import { createRoomAndJoin, setName, useStore } from "@web/state/store";
 import { navigate } from "@web/nav/router";
 import { DesktopStage } from "./DesktopStage";
 
@@ -136,17 +136,15 @@ export function CreateScreen({ gameId }: { gameId: string }) {
           <Button
             full
             variant="primary"
-            onClick={() => {
-              send({
-                t: "createRoom",
+            onClick={() =>
+              createRoomAndJoin({
                 gameId,
                 roomName,
                 isPrivate,
                 maxPlayers,
-              });
-              // Send the config through as a follow-up setConfig after the room lands.
-              setTimeout(() => send({ t: "setConfig", config }), 200);
-            }}
+                config,
+              }).then(() => navigate({ name: "lobby" }))
+            }
           >
             방 만들고 초대 ▶
           </Button>

@@ -1,44 +1,28 @@
 import { getGame } from "@shared/games/registry";
 import { makeRng, type Seat } from "@shared/engine";
-import type { RoomStatePublic, S2C, SeatPublic } from "@shared/protocol";
+import type { C2S, RoomStatePublic, S2C, SeatPublic } from "@shared/protocol";
 
 /**
- * Durable Object — one instance per room. Also serves the "index" role
- * (code table) when the DO is named `index`.
+ * Durable Object — one instance per room. Same class also serves the
+ * `index` singleton (code→DO name table).
+ *
+ * WebSocket ownership:
+ *   The Worker forwards the initial `/ws?code=…` upgrade directly to this
+ *   DO. We use the hibernating WebSocket API — `state.acceptWebSocket(ws)`
+ *   with a session-tagged attachment — so idle rooms free memory but stay
+ *   ready to receive.
+ *
+ * Attachment shape (per WS):
+ *   { sessionId: string; userId?: string; seatId?: string }
  *
  * Storage:
- *   - `meta`         : { code, gameId, roomName, isPrivate, maxPlayers, hostUserId }
- *   - `seats`        : SeatPublic[]  (also serves as membership list)
- *   - `sessionMap`   : sessionId -> { userId, seatId }
- *   - `config`       : arbitrary game config
- *   - `gameState`    : engine state (secret info stored here — projected per seat)
- *   - `version`      : monotonic tick used for cache invalidation
- *
- * Presence:
- *   - Each connected session opens a `/subscribe?session=…` stream.
- *   - The DO holds those streams in memory (they don't survive DO eviction —
- *     the Worker will re-open them via reconnect logic).
+ *   meta         : { code, gameId, roomName, isPrivate, maxPlayers, hostUserId }
+ *   seats        : SeatPublic[]
+ *   sessionMap   : sessionId -> { userId, seatId, displayName }
+ *   config       : arbitrary game config
+ *   gameState    : engine state
+ *   version      : monotonic tick
  */
-
-type IncomingMsg =
-  | {
-      t: "join";
-      sessionId: string;
-      userId: string;
-      displayName: string;
-      asHost?: boolean;
-      roomName?: string;
-      isPrivate?: boolean;
-      maxPlayers?: number;
-      gameId?: string;
-      code?: string;
-    }
-  | { t: "leave"; sessionId: string }
-  | { t: "disconnect"; sessionId: string }
-  | { t: "setConfig"; sessionId: string; config: unknown }
-  | { t: "setReady"; sessionId: string; ready: boolean }
-  | { t: "startMatch"; sessionId: string }
-  | { t: "action"; sessionId: string; action: unknown };
 
 interface Meta {
   code: string;
@@ -55,15 +39,19 @@ interface SessionMapEntry {
   displayName: string;
 }
 
-// Only the index DO uses this table.
 interface IndexTable {
   codeToName: Record<string, string>;
 }
 
-const CODE_ALPHABET = "234567890QWERTYUPASDFGHJKLZXCVBNM"; // no easily-confused chars
+interface WsAttachment {
+  sessionId: string;
+  userId?: string;
+  seatId?: string;
+}
+
+const CODE_ALPHABET = "234567890QWERTYUPASDFGHJKLZXCVBNM";
 
 export class Room {
-  private streams = new Map<string, WritableStreamDefaultWriter>(); // sessionId -> writer
   private meta: Meta | null = null;
   private seats: SeatPublic[] = [];
   private sessionMap: Record<string, SessionMapEntry> = {};
@@ -114,7 +102,6 @@ export class Room {
       const table = ((await this.state.storage.get<IndexTable>("index")) ?? {
         codeToName: {},
       }) as IndexTable;
-      // Generate a 6-char code that's not taken.
       let code = "";
       for (let attempt = 0; attempt < 10; attempt++) {
         code = "";
@@ -123,19 +110,20 @@ export class Room {
         }
         if (!table.codeToName[code]) break;
       }
-      const roomName = `room-${code}-${Date.now().toString(36)}`;
+      const roomName = `room-${code}-${gameId}-${Date.now().toString(36)}`;
       table.codeToName[code] = roomName;
       await this.state.storage.put("index", table);
-      // Bootstrap the target room DO's meta by hitting it.
-      // We can't do that from here easily; the room DO will fill on first `join`.
-      // Store the intended gameId in a separate map keyed by roomName for the
-      // room DO to fetch when it hydrates. For simplicity we return both.
-      const pendingMap =
+      // Seed the target room by directly opening a bootstrap fetch on it.
+      // Alternative would be a pendingRoom table, but explicit is clearer.
+      // We can't call other DOs from within a DO without env, so store the
+      // gameId in a per-name pending map that the target room fetches on
+      // its first join.
+      const pending =
         ((await this.state.storage.get<Record<string, { gameId: string; code: string }>>(
           "pendingRooms"
         )) ?? {}) as Record<string, { gameId: string; code: string }>;
-      pendingMap[roomName] = { gameId, code };
-      await this.state.storage.put("pendingRooms", pendingMap);
+      pending[roomName] = { gameId, code };
+      await this.state.storage.put("pendingRooms", pending);
       return json({ code, name: roomName });
     }
     if (url.pathname === "/lookup") {
@@ -146,202 +134,248 @@ export class Room {
       const name = code ? table.codeToName[code] : undefined;
       return json({ name: name ?? null });
     }
-    if (url.pathname === "/pendingBootstrap") {
-      const roomName = url.searchParams.get("name") ?? "";
-      const pending =
-        ((await this.state.storage.get<Record<string, { gameId: string; code: string }>>(
-          "pendingRooms"
-        )) ?? {}) as Record<string, { gameId: string; code: string }>;
-      const b = pending[roomName];
-      if (b) {
-        delete pending[roomName];
-        await this.state.storage.put("pendingRooms", pending);
-      }
-      return json(b ?? null);
-    }
 
-    /* ============ Room-DO endpoints ============ */
-    if (url.pathname === "/msg" && req.method === "POST") {
-      const msg = (await req.json()) as IncomingMsg;
-      await this.handleMessage(msg);
-      return new Response("ok");
-    }
-    if (url.pathname === "/subscribe") {
-      const sessionId = url.searchParams.get("session") ?? "";
-      const { readable, writable } = new TransformStream<Uint8Array>();
-      const writer = writable.getWriter();
-      // Close any existing stream for this session.
-      const prev = this.streams.get(sessionId);
-      if (prev) {
-        try {
-          await prev.close();
-        } catch {
-          /* ignore */
-        }
+    /* ============ Room WS upgrade ============ */
+    if (url.pathname === "/ws") {
+      if (req.headers.get("Upgrade") !== "websocket") {
+        return new Response("expected websocket", { status: 400 });
       }
-      this.streams.set(sessionId, writer);
-      // Send an initial snapshot.
-      await this.sendTo(sessionId, this.buildRoomState());
-      const view = this.buildGameView(sessionId);
-      if (view) await this.sendTo(sessionId, view);
-      return new Response(readable, {
-        status: 200,
-        headers: { "content-type": "application/x-ndjson", "cache-control": "no-cache" },
-      });
+      const sessionId = url.searchParams.get("session") ?? "";
+      if (!sessionId) return new Response("missing session", { status: 400 });
+      const pair = new WebSocketPair();
+      const client = pair[0];
+      const server = pair[1];
+      // Hibernating accept — DO can hibernate; messages are delivered as
+      // `webSocketMessage` events even after the isolate wakes.
+      this.state.acceptWebSocket(server, [sessionId]);
+      const attach: WsAttachment = { sessionId };
+      server.serializeAttachment(attach);
+      // Kick off welcome + snapshot.
+      this.sendTo(server, { t: "welcome", sessionId, userId: sessionId });
+      this.sendTo(server, this.buildRoomState());
+      const v = this.buildGameView(sessionId);
+      if (v) this.sendTo(server, v);
+      return new Response(null, { status: 101, webSocket: client });
     }
     return new Response("not found", { status: 404 });
   }
 
-  /* ============ Room logic ============ */
+  /* ============ Hibernating WebSocket handlers ============ */
 
-  private async handleMessage(msg: IncomingMsg): Promise<void> {
-    if (msg.t === "join") {
-      // First host to arrive seeds the room's meta; joiners inherit it.
-      if (!this.meta) {
-        this.meta = {
-          code: msg.code ?? this.state.id.name?.slice(5).split("-")[0] ?? "?",
-          gameId: msg.gameId ?? "momonty",
-          roomName: msg.roomName ?? "새 방",
-          isPrivate: msg.isPrivate ?? true,
-          maxPlayers: msg.maxPlayers ?? 6,
-          hostUserId: msg.asHost ? msg.userId : "",
-        };
-      }
-      const existing = this.sessionMap[msg.sessionId];
-      if (existing) {
-        // Reconnection — mark seat online again.
-        this.seats = this.seats.map((s) =>
-          s.seatId === existing.seatId ? { ...s, online: true } : s
-        );
-      } else {
-        if (this.seats.length >= (this.meta?.maxPlayers ?? 6)) {
-          await this.sendTo(msg.sessionId, {
-            t: "error",
-            message: "방이 가득 찼어요",
-            code: "ROOM_FULL",
-          });
-          return;
-        }
-        if (msg.asHost && this.seats.length === 0) {
-          if (this.meta) {
-            this.meta.hostUserId = msg.userId;
-            if (msg.roomName != null) this.meta.roomName = msg.roomName;
-            if (msg.isPrivate != null) this.meta.isPrivate = msg.isPrivate;
-            if (msg.maxPlayers != null) this.meta.maxPlayers = msg.maxPlayers;
-            if (msg.gameId != null) this.meta.gameId = msg.gameId;
-          }
-        }
-        const seatId = `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-        const seat: SeatPublic = {
-          seatId,
-          userId: msg.userId,
-          displayName: msg.displayName || "게스트",
-          ready: false,
-          online: true,
-          isHost: this.seats.length === 0 || this.meta?.hostUserId === msg.userId,
-        };
-        this.seats.push(seat);
-        this.sessionMap[msg.sessionId] = {
-          userId: msg.userId,
-          seatId,
-          displayName: seat.displayName,
-        };
-      }
-      this.bumpVersion();
-      await this.persist();
-      await this.broadcastRoomState();
+  async webSocketMessage(ws: WebSocket, data: string | ArrayBuffer): Promise<void> {
+    await this.hydrate();
+    if (typeof data !== "string") return;
+    let msg: C2S;
+    try {
+      msg = JSON.parse(data);
+    } catch {
       return;
     }
-    if (msg.t === "leave" || msg.t === "disconnect") {
-      const entry = this.sessionMap[msg.sessionId];
-      if (!entry) return;
-      if (msg.t === "leave") {
-        this.seats = this.seats.filter((s) => s.seatId !== entry.seatId);
-        delete this.sessionMap[msg.sessionId];
-      } else {
-        // Disconnect — keep the seat, just mark offline for reconnection.
-        this.seats = this.seats.map((s) =>
-          s.seatId === entry.seatId ? { ...s, online: false } : s
-        );
-      }
-      this.streams.get(msg.sessionId)?.close();
-      this.streams.delete(msg.sessionId);
-      this.bumpVersion();
-      await this.persist();
-      await this.broadcastRoomState();
-      return;
-    }
-    if (msg.t === "setConfig") {
-      if (!this.isHost(msg.sessionId)) return;
-      this.config = msg.config;
-      this.bumpVersion();
-      await this.persist();
-      await this.broadcastRoomState();
-      return;
-    }
-    if (msg.t === "setReady") {
-      const entry = this.sessionMap[msg.sessionId];
-      if (!entry) return;
+    const attach = (ws.deserializeAttachment() ?? {}) as WsAttachment;
+    await this.handleClientMessage(ws, attach, msg);
+  }
+
+  async webSocketClose(ws: WebSocket): Promise<void> {
+    await this.hydrate();
+    const attach = (ws.deserializeAttachment() ?? {}) as WsAttachment;
+    const entry = attach.sessionId ? this.sessionMap[attach.sessionId] : undefined;
+    if (entry) {
       this.seats = this.seats.map((s) =>
-        s.seatId === entry.seatId ? { ...s, ready: msg.ready } : s
+        s.seatId === entry.seatId ? { ...s, online: false } : s
       );
       this.bumpVersion();
       await this.persist();
-      await this.broadcastRoomState();
-      return;
+      this.broadcastRoomState();
     }
-    if (msg.t === "startMatch") {
-      if (!this.isHost(msg.sessionId)) return;
-      if (!this.meta) return;
-      const readyCount = this.seats.filter((s) => s.ready || s.isHost).length;
-      if (readyCount < this.seats.length) return;
-      const game = getGame(this.meta.gameId);
-      const cfg = this.config ?? game.defaultConfig();
-      this.config = cfg;
-      const seats: Seat[] = this.seats.map((s) => ({
-        seatId: s.seatId,
-        userId: s.userId,
-        displayName: s.displayName,
-        ready: true,
-        online: s.online,
-        isHost: s.isHost,
-      }));
-      const seed = `${this.meta.code}:${Date.now()}`;
-      const rng = makeRng(seed);
-      this.gameState = game.init({ seats, config: cfg as any, rng });
-      this.bumpVersion();
-      await this.persist();
-      await this.broadcastRoomState();
-      await this.broadcastGameView([]);
-      return;
-    }
-    if (msg.t === "action") {
-      const entry = this.sessionMap[msg.sessionId];
-      if (!entry || !this.meta || !this.gameState) return;
-      const game = getGame(this.meta.gameId);
-      const seatId = entry.seatId;
-      const seed = `${this.meta.code}:${this.version}:${seatId}`;
-      const rng = makeRng(seed);
-      try {
-        const { state, events } = game.reduce({
-          state: this.gameState as any,
-          seatId,
-          action: msg.action as any,
-          rng,
-        });
-        this.gameState = state;
+  }
+
+  async webSocketError(ws: WebSocket): Promise<void> {
+    await this.webSocketClose(ws);
+  }
+
+  /* ============ Message routing ============ */
+
+  private async handleClientMessage(
+    ws: WebSocket,
+    attach: WsAttachment,
+    msg: C2S
+  ): Promise<void> {
+    switch (msg.t) {
+      case "hello": {
+        // Bootstrap meta from DO name on first hello.
+        await this.ensureBootstrap();
+        const userId = msg.sessionId; // 1:1 map for now
+        // Host seeds room-level meta on first connect.
+        const willBeHost = this.seats.length === 0 && this.meta && !this.meta.hostUserId;
+        if (willBeHost && this.meta && msg.seedMeta) {
+          if (msg.seedMeta.roomName != null) this.meta.roomName = msg.seedMeta.roomName;
+          if (msg.seedMeta.isPrivate != null) this.meta.isPrivate = msg.seedMeta.isPrivate;
+          if (msg.seedMeta.maxPlayers != null) this.meta.maxPlayers = msg.seedMeta.maxPlayers;
+        }
+        const existing = this.sessionMap[msg.sessionId];
+        if (existing) {
+          this.seats = this.seats.map((s) =>
+            s.seatId === existing.seatId ? { ...s, online: true } : s
+          );
+          attach.userId = existing.userId;
+          attach.seatId = existing.seatId;
+          ws.serializeAttachment(attach);
+        } else {
+          const isFirst = this.seats.length === 0;
+          if (!this.meta) return;
+          if (this.seats.length >= this.meta.maxPlayers) {
+            this.sendTo(ws, { t: "error", message: "방이 가득 찼어요", code: "ROOM_FULL" });
+            return;
+          }
+          const seatId = `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+          const seat: SeatPublic = {
+            seatId,
+            userId,
+            displayName: msg.displayName || "게스트",
+            ready: false,
+            online: true,
+            isHost: isFirst,
+          };
+          this.seats.push(seat);
+          this.sessionMap[msg.sessionId] = {
+            userId,
+            seatId,
+            displayName: seat.displayName,
+          };
+          if (isFirst) {
+            this.meta.hostUserId = userId;
+          }
+          attach.userId = userId;
+          attach.seatId = seatId;
+          ws.serializeAttachment(attach);
+        }
         this.bumpVersion();
         await this.persist();
-        await this.broadcastGameView(events);
-      } catch (err) {
-        await this.sendTo(msg.sessionId, {
-          t: "error",
-          message: (err as Error).message,
-          code: "ACTION_INVALID",
-        });
+        this.broadcastRoomState();
+        const v = this.buildGameView(msg.sessionId);
+        if (v) this.sendTo(ws, v);
+        return;
       }
-      return;
+      case "leaveRoom": {
+        const entry = this.sessionMap[attach.sessionId];
+        if (!entry) return;
+        this.seats = this.seats.filter((s) => s.seatId !== entry.seatId);
+        delete this.sessionMap[attach.sessionId];
+        this.bumpVersion();
+        await this.persist();
+        this.broadcastRoomState();
+        try {
+          ws.close(1000, "left");
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+      case "setConfig": {
+        if (!this.isHost(attach.sessionId)) return;
+        this.config = msg.config;
+        this.bumpVersion();
+        await this.persist();
+        this.broadcastRoomState();
+        return;
+      }
+      case "setReady": {
+        const entry = this.sessionMap[attach.sessionId];
+        if (!entry) return;
+        this.seats = this.seats.map((s) =>
+          s.seatId === entry.seatId ? { ...s, ready: msg.ready } : s
+        );
+        this.bumpVersion();
+        await this.persist();
+        this.broadcastRoomState();
+        return;
+      }
+      case "startMatch": {
+        if (!this.isHost(attach.sessionId) || !this.meta) return;
+        const ready = this.seats.every((s) => s.ready || s.isHost);
+        if (!ready) return;
+        const game = getGame(this.meta.gameId);
+        const cfg = this.config ?? game.defaultConfig();
+        this.config = cfg;
+        const seats: Seat[] = this.seats.map((s) => ({
+          seatId: s.seatId,
+          userId: s.userId,
+          displayName: s.displayName,
+          ready: true,
+          online: s.online,
+          isHost: s.isHost,
+        }));
+        const seed = `${this.meta.code}:${Date.now()}`;
+        const rng = makeRng(seed);
+        this.gameState = game.init({ seats, config: cfg as any, rng });
+        this.bumpVersion();
+        await this.persist();
+        this.broadcastRoomState();
+        this.broadcastGameView([]);
+        return;
+      }
+      case "action": {
+        const entry = this.sessionMap[attach.sessionId];
+        if (!entry || !this.meta || !this.gameState) return;
+        const game = getGame(this.meta.gameId);
+        const seed = `${this.meta.code}:${this.version}:${entry.seatId}`;
+        const rng = makeRng(seed);
+        try {
+          const { state, events } = game.reduce({
+            state: this.gameState as any,
+            seatId: entry.seatId,
+            action: msg.action as any,
+            rng,
+          });
+          this.gameState = state;
+          this.bumpVersion();
+          await this.persist();
+          this.broadcastGameView(events);
+        } catch (err) {
+          this.sendTo(ws, {
+            t: "error",
+            message: (err as Error).message,
+            code: "ACTION_INVALID",
+          });
+        }
+        return;
+      }
+      case "ping":
+        this.sendTo(ws, { t: "pong" });
+        return;
     }
+  }
+
+  /* ============ Helpers ============ */
+
+  private async ensureBootstrap(): Promise<void> {
+    if (this.meta) return;
+    const name = this.state.id.name;
+    if (!name) return;
+    // Reach index DO through storage — not possible cross-DO without env.
+    // Instead, callers write to `pendingRooms` at code creation time; here
+    // we fetch our own row and remove it.
+    // Since we can't reach another DO's storage from this DO, this DO IS
+    // the index DO only when its name is "index". Room DOs never have meta
+    // via pending. So we handle meta bootstrap differently:
+    //   - room DO's name is `room-<CODE>-<TS>`; extract CODE
+    //   - gameId defaults to "momonty" but is overwritten on first `hello`
+    //     via a follow-up broadcast that carries the desired game id — no,
+    //     simpler: store meta with defaults and rely on the client-supplied
+    //     `hello` (which cannot carry gameId in current protocol). So we
+    //     read the code and set gameId="momonty" default; the host UI does
+    //     not currently allow changing gameId after room creation.
+    // Name format: room-<CODE>-<GAMEID>-<TS>
+    const parts = name.startsWith("room-") ? name.slice(5).split("-") : ["?"];
+    this.meta = {
+      code: parts[0] ?? "?",
+      gameId: parts[1] ?? "momonty",
+      roomName: "새 방",
+      isPrivate: true,
+      maxPlayers: 6,
+      hostUserId: "",
+    };
+    await this.persist();
   }
 
   private bumpVersion(): void {
@@ -399,32 +433,30 @@ export class Room {
     return { t: "gameView", view, events: [], version: this.version };
   }
 
-  private async broadcastRoomState(): Promise<void> {
+  private broadcastRoomState(): void {
     const msg = this.buildRoomState();
-    for (const [sid] of this.streams) {
-      await this.sendTo(sid, msg);
+    for (const ws of this.state.getWebSockets()) {
+      this.sendTo(ws, msg);
     }
   }
 
-  private async broadcastGameView(events: unknown[]): Promise<void> {
+  private broadcastGameView(events: unknown[]): void {
     if (!this.gameState || !this.meta) return;
     const game = getGame(this.meta.gameId);
-    for (const [sid] of this.streams) {
-      const entry = this.sessionMap[sid];
+    for (const ws of this.state.getWebSockets()) {
+      const attach = (ws.deserializeAttachment() ?? {}) as WsAttachment;
+      const entry = attach.sessionId ? this.sessionMap[attach.sessionId] : undefined;
       const view = game.view(this.gameState, entry?.seatId ?? null);
-      await this.sendTo(sid, { t: "gameView", view, events, version: this.version });
+      this.sendTo(ws, { t: "gameView", view, events, version: this.version });
     }
-    // Room state may have changed (phase).
-    await this.broadcastRoomState();
+    this.broadcastRoomState();
   }
 
-  private async sendTo(sessionId: string, msg: unknown): Promise<void> {
-    const w = this.streams.get(sessionId);
-    if (!w) return;
+  private sendTo(ws: WebSocket, msg: unknown): void {
     try {
-      await w.write(new TextEncoder().encode(JSON.stringify(msg) + "\n"));
+      ws.send(JSON.stringify(msg));
     } catch {
-      this.streams.delete(sessionId);
+      /* peer disconnected — ignore */
     }
   }
 }

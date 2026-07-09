@@ -6,8 +6,9 @@ import {
   Pill,
   ScreenHeader,
 } from "@web/design/primitives";
-import { send, useStore } from "@web/state/store";
+import { leaveRoom, send, useStore } from "@web/state/store";
 import { navigate } from "@web/nav/router";
+import { openRules } from "./RulesSheet";
 import { DesktopStage } from "./DesktopStage";
 import type { SeatPublic } from "@shared/protocol";
 
@@ -38,13 +39,29 @@ export function LobbyScreen() {
         <ScreenHeader
           title={room.roomName || "새 방"}
           onBack={() => {
-            send({ t: "leaveRoom" });
+            leaveRoom();
             navigate({ name: "home" });
           }}
           right={
-            <span style={{ fontSize: 11, color: "var(--text-5)" }}>
-              {room.seats.length}/{room.maxPlayers}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => openRules(room.gameId)}
+                style={{
+                  padding: "5px 10px",
+                  borderRadius: 999,
+                  background: "var(--glass-2)",
+                  border: "1px solid var(--glass-border-1)",
+                  color: "var(--text-4)",
+                  fontSize: 11,
+                }}
+              >
+                규칙 ⓘ
+              </button>
+              <span style={{ fontSize: 11, color: "var(--text-5)" }}>
+                {room.seats.length}/{room.maxPlayers}
+              </span>
+            </div>
           }
         />
         <div style={{ padding: "8px 16px 0", display: "flex", flexDirection: "column", gap: 10 }}>

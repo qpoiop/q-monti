@@ -8,9 +8,14 @@
 /* ============ Client -> Server ============ */
 
 export type C2S =
-  | { t: "hello"; sessionId: string; displayName: string }
-  | { t: "createRoom"; gameId: string; roomName?: string; isPrivate?: boolean; maxPlayers: number }
-  | { t: "joinRoom"; code: string }
+  | {
+      t: "hello";
+      sessionId: string;
+      displayName: string;
+      // Only meaningful when the caller is the room host on first connect —
+      // seeds the room DO's meta. Ignored on later hellos and for joiners.
+      seedMeta?: { roomName?: string; isPrivate?: boolean; maxPlayers?: number };
+    }
   | { t: "leaveRoom" }
   | { t: "setConfig"; config: unknown }
   | { t: "setReady"; ready: boolean }

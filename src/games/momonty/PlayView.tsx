@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { PlayingCard } from "@web/design/PlayingCard";
 import { Button, Card, Pill } from "@web/design/primitives";
 import { send, useStore } from "@web/state/store";
+import { openRules } from "@web/screens/RulesSheet";
 import type {
   Card as MCard,
   MomontyView,
@@ -61,9 +62,25 @@ function Header({ view }: { view: MomontyView }) {
           </div>
         ) : null}
       </div>
-      <Pill tone={myTurn ? "accent" : "muted"}>
-        {myTurn ? "내 차례" : view.currentSeatId ? "상대 차례" : "—"}
-      </Pill>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <button
+          type="button"
+          onClick={() => openRules("momonty")}
+          style={{
+            padding: "5px 10px",
+            borderRadius: 999,
+            background: "var(--glass-2)",
+            border: "1px solid var(--glass-border-1)",
+            color: "var(--text-4)",
+            fontSize: 11,
+          }}
+        >
+          규칙 ⓘ
+        </button>
+        <Pill tone={myTurn ? "accent" : "muted"}>
+          {myTurn ? "내 차례" : view.currentSeatId ? "상대 차례" : "—"}
+        </Pill>
+      </div>
     </div>
   );
 }

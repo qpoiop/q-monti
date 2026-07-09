@@ -1,20 +1,17 @@
 import { useSyncExternalStore } from "react";
 import type { C2S, RoomStatePublic, S2C } from "@shared/protocol";
-import { Transport, buildWsUrl, getDisplayName, getSessionId, setDisplayName } from "@web/net/transport";
-
-/**
- * App-wide store. Frameworkless subscribe-notify so any component can
- * `useStore(sel)` — the transport lifecycle is decoupled from React.
- *
- * State shape is intentionally flat: route, connection status, session,
- * room state and the current game view. The view is game-agnostic — the
- * consumer picks the game module by id and renders accordingly.
- */
+import {
+  Transport,
+  api,
+  getDisplayName,
+  getSessionId,
+  setDisplayName,
+} from "@web/net/transport";
 
 export interface AppState {
   route: Route;
   session: { sessionId: string; userId?: string; displayName: string };
-  connection: "connecting" | "connected" | "reconnecting" | "closed";
+  connection: "idle" | "connecting" | "connected" | "reconnecting" | "closed";
   room?: RoomStatePublic;
   gameView?: { view: unknown; version: number; lastEvents: unknown[] };
   error?: string;
@@ -33,7 +30,7 @@ export type Route =
 const initial: AppState = {
   route: { name: "home" },
   session: { sessionId: getSessionId(), displayName: getDisplayName() },
-  connection: "connecting",
+  connection: "idle",
 };
 
 let current: AppState = initial;
@@ -65,7 +62,7 @@ export function useStore<T>(sel: (s: AppState) => T): T {
 let transport: Transport | null = null;
 export function getTransport(): Transport {
   if (!transport) {
-    transport = new Transport(buildWsUrl());
+    transport = new Transport();
     transport.onStatus((s) => {
       setState({
         connection:
@@ -75,11 +72,12 @@ export function getTransport(): Transport {
             ? "connecting"
             : s.kind === "reconnecting"
             ? "reconnecting"
-            : "closed",
+            : s.kind === "closed"
+            ? "closed"
+            : "idle",
       });
     });
-    transport.onMessage((m) => handleServerMessage(m));
-    transport.connect();
+    transport.onMessage(handleServerMessage);
   }
   return transport;
 }
@@ -90,10 +88,6 @@ function handleServerMessage(m: S2C): void {
       setState({
         session: { ...current.session, sessionId: m.sessionId, userId: m.userId },
       });
-      break;
-    case "roomCreated":
-      setState({ room: undefined, route: { name: "lobby" } });
-      setState({ toast: { text: `방 코드: ${m.code}`, ts: Date.now() } });
       break;
     case "roomState": {
       const cur = current.route;
@@ -110,16 +104,15 @@ function handleServerMessage(m: S2C): void {
       break;
     }
     case "gameView":
-      setState((s) => ({
+      setState({
         gameView: {
           view: m.view,
           version: m.version,
           lastEvents: m.events,
         },
-      }));
+      });
       break;
     case "chat":
-      // Not currently rendered — placeholder for future chat UI.
       break;
     case "error":
       setState({ error: m.message, toast: { text: m.message, ts: Date.now() } });
@@ -129,11 +122,59 @@ function handleServerMessage(m: S2C): void {
   }
 }
 
-/* -------------------------- Actions (thin wrappers) -------------------------- */
+/* -------------------------- Actions -------------------------- */
 
 export function send(msg: C2S): void {
   getTransport().send(msg);
 }
+
+/** Host action — creates a new room via HTTP then opens the WS to it. */
+export async function createRoomAndJoin(args: {
+  gameId: string;
+  roomName?: string;
+  isPrivate?: boolean;
+  maxPlayers: number;
+  config?: unknown;
+}): Promise<void> {
+  const t = getTransport();
+  t.close();
+  const { code } = await api.newRoom(args.gameId);
+  setState({
+    toast: { text: `방 코드: ${code}`, ts: Date.now() },
+  });
+  t.connect(code, {
+    seedMeta: {
+      roomName: args.roomName,
+      isPrivate: args.isPrivate,
+      maxPlayers: args.maxPlayers,
+    },
+  });
+  if (args.config != null) {
+    // Fire after connect settles — transport queues until open.
+    t.send({ t: "setConfig", config: args.config });
+  }
+}
+
+/** Joiner action — validates code exists, then opens the WS. */
+export async function joinRoomByCode(code: string): Promise<boolean> {
+  const t = getTransport();
+  t.close();
+  const { name } = await api.lookup(code.toUpperCase()).catch(() => ({ name: null }));
+  if (!name) {
+    setState({ toast: { text: "방을 찾을 수 없어요", ts: Date.now() } });
+    return false;
+  }
+  t.connect(code.toUpperCase());
+  return true;
+}
+
+export function leaveRoom(): void {
+  const t = getTransport();
+  t.send({ t: "leaveRoom" });
+  t.close();
+  setState({ room: undefined, gameView: undefined });
+}
+
 export function goto(route: Route): void {
   setState({ route });
 }

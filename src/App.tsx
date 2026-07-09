@@ -11,12 +11,13 @@ import { ConnectionOverlay } from "./screens/ConnectionOverlay";
 import { Toast } from "./screens/Toast";
 import { InstallLayer } from "./screens/InstallLayer";
 import { ExitConfirm } from "./screens/ExitConfirm";
+import { RulesSheet } from "./screens/RulesSheet";
 import { initRouter } from "./nav/router";
 import { registerSW } from "./pwa/register";
 
 export function App() {
   useEffect(() => {
-    getTransport();
+    getTransport(); // subscribe to status/messages — no WS opened yet.
     initRouter();
     registerSW();
   }, []);
@@ -48,6 +49,7 @@ export function App() {
       <InstallLayer />
       <ConnectionOverlay />
       <ExitConfirm />
+      <RulesSheet />
       <Toast />
     </div>
   );

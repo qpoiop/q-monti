@@ -3,13 +3,8 @@ import { ScreenHeader } from "@web/design/primitives";
 import { useStore } from "@web/state/store";
 import { navigate } from "@web/nav/router";
 import { DesktopStage } from "./DesktopStage";
-import { MomontyPlayView } from "@web/games/momonty/PlayView";
+import { PLAY_GRADIENTS, PLAY_VIEWS } from "@web/games/registry";
 
-/**
- * Play dispatcher — picks the game's view module by id.
- * Each game plugs in a component that reads `gameView.view` (typed to its
- * own View shape) and renders the play surface.
- */
 export function PlayScreen() {
   const room = useStore((s) => s.room);
   const view = useStore((s) => s.gameView?.view);
@@ -25,30 +20,25 @@ export function PlayScreen() {
       </DesktopStage>
     );
   }
-  switch (room.gameId) {
-    case "momonty":
-      return (
-        <DesktopStage>
-          <PhoneFrame
-            gradient="radial-gradient(90% 40% at 50% 0%, rgba(242,193,78,.16), transparent 60%)"
-          >
-            <MomontyPlayView view={view as any} />
-          </PhoneFrame>
-        </DesktopStage>
-      );
-    default:
-      return (
-        <DesktopStage>
-          <PhoneFrame>
-            <ScreenHeader title={`${room.gameId} · 플레이`} />
-            <div style={{ padding: 16, color: "var(--text-4)", fontSize: 13 }}>
-              이 게임의 플레이 화면은 곧 추가돼요. 서버 로직은 이미 동작합니다.
-              <pre style={{ marginTop: 12, fontSize: 10, whiteSpace: "pre-wrap" }}>
-                {JSON.stringify(view, null, 2)}
-              </pre>
-            </div>
-          </PhoneFrame>
-        </DesktopStage>
-      );
+  const View = PLAY_VIEWS[room.gameId];
+  const gradient = PLAY_GRADIENTS[room.gameId];
+  if (!View) {
+    return (
+      <DesktopStage>
+        <PhoneFrame gradient={gradient}>
+          <ScreenHeader title={`${room.gameId} · 지원 준비 중`} />
+          <div style={{ padding: 16, color: "var(--text-4)", fontSize: 13 }}>
+            이 게임의 UI는 아직 등록되지 않았어요.
+          </div>
+        </PhoneFrame>
+      </DesktopStage>
+    );
   }
+  return (
+    <DesktopStage>
+      <PhoneFrame gradient={gradient}>
+        <View view={view} />
+      </PhoneFrame>
+    </DesktopStage>
+  );
 }

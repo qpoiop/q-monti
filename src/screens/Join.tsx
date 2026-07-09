@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { PhoneFrame } from "@web/design/PhoneFrame";
 import { BottomBar, Button, ScreenHeader } from "@web/design/primitives";
-import { send } from "@web/state/store";
+import { joinRoomByCode } from "@web/state/store";
 import { navigate } from "@web/nav/router";
 import { DesktopStage } from "./DesktopStage";
 
@@ -91,7 +91,11 @@ export function JoinScreen() {
             full
             variant="primary"
             disabled={code.length !== 6}
-            onClick={() => send({ t: "joinRoom", code })}
+            onClick={() =>
+              joinRoomByCode(code).then((ok) => {
+                if (ok) navigate({ name: "lobby" });
+              })
+            }
           >
             입장하기 ▶
           </Button>

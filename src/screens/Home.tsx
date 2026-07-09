@@ -5,6 +5,7 @@ import { navigate } from "@web/nav/router";
 import { DesktopStage } from "./DesktopStage";
 import { Aurora } from "@web/design/effects/Aurora";
 import { Particles } from "@web/design/effects/Particles";
+import { openRules } from "./RulesSheet";
 
 export function HomeScreen() {
   const displayName = useStore((s) => s.session.displayName);
@@ -92,7 +93,21 @@ export function HomeScreen() {
               <span style={{ color: "var(--text-2)", fontSize: 12, fontWeight: 600 }}>
                 {displayName}
               </span>
-              <span style={{ marginLeft: "auto", color: "var(--text-5)", fontSize: 12 }}>규칙 ⓘ</span>
+              <button
+                type="button"
+                onClick={() => openRules("momonty")}
+                style={{
+                  marginLeft: "auto",
+                  color: "var(--text-5)",
+                  fontSize: 12,
+                  padding: "4px 10px",
+                  borderRadius: 999,
+                  background: "var(--glass-2)",
+                  border: "1px solid var(--glass-border-1)",
+                }}
+              >
+                규칙 ⓘ
+              </button>
             </div>
           </div>
         </div>
