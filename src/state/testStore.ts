@@ -111,6 +111,10 @@ export function testDispatch(
       actingSeatId: nextActing,
     };
     notify();
+    // Mirror to the global store so shared overlays that read
+    // `gameView.lastEvents` (revolution / tax result / history) still
+    // fire during test-mode runs.
+    void mirrorToGlobalStore();
     return { ok: true };
   } catch (e) {
     return { ok: false, error: (e as Error).message };
@@ -121,6 +125,20 @@ export function setActingSeat(seatId: string): void {
   if (!current) return;
   current = { ...current, actingSeatId: seatId };
   notify();
+  void mirrorToGlobalStore();
+}
+
+async function mirrorToGlobalStore(): Promise<void> {
+  if (!current) return;
+  const { patchState } = await import("./store");
+  const view = viewForSeat(current.actingSeatId);
+  patchState({
+    gameView: {
+      view,
+      version: current.version,
+      lastEvents: current.events,
+    },
+  });
 }
 
 export function useTest<T>(sel: (s: TestState) => T): T {

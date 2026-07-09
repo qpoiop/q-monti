@@ -253,20 +253,30 @@ export function Taxation({ view }: { view: MomontyView }) {
 }
 
 function findRecipient(view: MomontyView, dir: "up" | "ret"): string | null {
-  if (dir === "up") {
-    for (const [s, r] of Object.entries(view.ranks)) {
-      if (r === "GRAND_MOMONTY") return s;
-    }
-    for (const [s, r] of Object.entries(view.ranks)) {
-      if (r === "MOMONTY") return s;
-    }
-    return null;
+  // Pair by rank so the UI matches the engine's delivery: grand peon ↔
+  // grand momonty, peon ↔ momonty. Falls back to the top/bottom seat if
+  // the paired rank is somehow missing (shouldn't happen in a normal
+  // 4+ seat game).
+  const myRank = view.mySeatId ? view.ranks[view.mySeatId] : undefined;
+  const targetRank: Rank | null =
+    dir === "up"
+      ? myRank === "GRAND_PEON"
+        ? "GRAND_MOMONTY"
+        : myRank === "PEON"
+        ? "MOMONTY"
+        : null
+      : myRank === "GRAND_MOMONTY"
+      ? "GRAND_PEON"
+      : myRank === "MOMONTY"
+      ? "PEON"
+      : null;
+  if (targetRank) {
+    for (const [s, r] of Object.entries(view.ranks)) if (r === targetRank) return s;
   }
-  for (const [s, r] of Object.entries(view.ranks)) {
-    if (r === "GRAND_PEON") return s;
-  }
-  for (const [s, r] of Object.entries(view.ranks)) {
-    if (r === "PEON") return s;
+  const fallback: Rank[] =
+    dir === "up" ? ["GRAND_MOMONTY", "MOMONTY"] : ["GRAND_PEON", "PEON"];
+  for (const wanted of fallback) {
+    for (const [s, r] of Object.entries(view.ranks)) if (r === wanted) return s;
   }
   return null;
 }

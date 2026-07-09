@@ -46,6 +46,15 @@ function setState(patch: Partial<AppState> | ((s: AppState) => Partial<AppState>
 export function getState(): AppState {
   return current;
 }
+/**
+ * Public setter — used by the test-mode store to mirror its local
+ * engine snapshot into the global gameView so the shared overlays
+ * (RevolutionOverlay, TaxResultOverlay, HistorySheet …) fire the same
+ * way they do against a live room.
+ */
+export function patchState(patch: Partial<AppState>): void {
+  setState(patch);
+}
 export function subscribe(l: () => void): () => void {
   listeners.add(l);
   return () => listeners.delete(l);
