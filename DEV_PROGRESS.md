@@ -25,6 +25,14 @@ Snapshot of what's shipped, what's live, and what's left. Written for context re
 
 ## Shipped (in reverse-chron)
 
+- **Wild build panel §3-3**: top wild suggestion renders as visual "내 세트 만들기 · N=N (M장 + 광대 K)" card with base + ★=X chips.
+- **ROUND_END pause phase**: engine stops at ROUND_END until confirmRoundEnd action; UI RoundEnd view + CTA. Bots settle it via botAction so autoplay doesn't wedge but human's seat waits.
+- **RevolutionPrompt §2-3**: dedicated full-frame prompt with ✊, 광대 카드 2장, 효과 리스트, 보류/혁명 선언 CTAs. Auto-opens when a seat holds ≥2 jesters.
+- **Tax result paired §2-4**: momonty↔peon pair rows with 받음 / 돌려줌 chips. Grand pair gold, lesser lilac.
+- **SettingsSheet layer**: room settings extracted from lobby collapsible into a bottom-modal with 기본 / 고급 tabs matching mockup §1-3.
+- **파일 → 덱**: terminology renamed per user directive.
+- **Bot pacing**: 700ms per bot step so turn transitions read visually.
+- **Button nowrap**: labels like "방 나가기" no longer break mid-word.
 - **Empty pile amber tint**: soft radial-gradient at the base so the empty state feels branded while it waits for a lead.
 - **완주 tag**: opp-cell shows an emerald 완주 tag when a seat's hand hits zero instead of "🂠0".
 - **Connection stuck escape**: after 12s of "서버 연결 중" the overlay offers a 홈으로 ghost button.
