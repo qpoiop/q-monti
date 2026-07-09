@@ -1,5 +1,14 @@
+import { useState } from "react";
 import { PhoneFrame } from "@web/design/PhoneFrame";
-import { Button, Card, Pill, ScreenHeader } from "@web/design/primitives";
+import {
+  Button,
+  Card,
+  Pill,
+  ScreenHeader,
+  SettingRow,
+  Stepper,
+  Toggle,
+} from "@web/design/primitives";
 import { leaveRoom, useStore } from "@web/state/store";
 import { navigate } from "@web/nav/router";
 import { DesktopStage } from "./DesktopStage";
@@ -34,6 +43,7 @@ export function LobbyScreen() {
   const readyCount = room.seats.filter((s) => s.ready || s.isHost).length;
   const canStart = readyCount === room.seats.length && room.seats.length >= 2;
   const emptySlots = Math.max(0, room.maxPlayers - room.seats.length);
+  const config = (room.config ?? {}) as Record<string, unknown>;
 
   const primary = isHost
     ? {
@@ -109,6 +119,16 @@ export function LobbyScreen() {
               </div>
             ))}
           </Stack>
+          <RoomSettingsPanel
+            config={config}
+            isHost={isHost}
+            onUpdate={(patch) =>
+              send({
+                t: "setConfig",
+                config: { ...config, ...patch },
+              })
+            }
+          />
         </ScreenBody>
         <FooterBar>
           <Button full variant="primary" disabled={primary.disabled} onClick={primary.onClick}>
@@ -117,6 +137,167 @@ export function LobbyScreen() {
         </FooterBar>
       </PhoneFrame>
     </DesktopStage>
+  );
+}
+
+/**
+ * Room settings — collapsible host-editable panel. Non-hosts see the
+ * same rows in a read-only style so they know what rules they're
+ * agreeing to. Server broadcasts config diffs; every seat reacts.
+ */
+function RoomSettingsPanel({
+  config,
+  isHost,
+  onUpdate,
+}: {
+  config: Record<string, unknown>;
+  isHost: boolean;
+  onUpdate: (patch: Record<string, unknown>) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const taxOn = (config.taxationEnabled as boolean) ?? true;
+  const revOn = (config.revolutionEnabled as boolean) ?? true;
+  const greatOn = (config.greatRevolutionEnabled as boolean) ?? false;
+  const jesterOn = (config.jesterPenalty as boolean) ?? true;
+  const quadOn = (config.quadLock as boolean) ?? true;
+  const rounds = (config.targetRounds as number) ?? 7;
+  const turnSec = (config.turnLimitSec as number) ?? 20;
+  const sets = (config.cardSets as number) ?? 1;
+  const taxResult = (config.taxResultVisible as boolean) ?? true;
+
+  return (
+    <div className="room-settings">
+      <button
+        type="button"
+        className="room-settings-toggle"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="room-settings-title">⚙ 게임 규칙</span>
+        <span className="room-settings-summary">
+          R{rounds} · {turnSec}초 · {sets}세트
+          {taxOn ? " · 과세" : ""}
+          {revOn ? " · 혁명" : ""}
+        </span>
+        <span className="room-settings-caret">{open ? "▾" : "▸"}</span>
+      </button>
+      {open ? (
+        <div className={`room-settings-body ${isHost ? "" : "readonly"}`}>
+          {!isHost ? (
+            <Hint>방장이 게임 규칙을 조정합니다.</Hint>
+          ) : null}
+          <SettingRow
+            label="카드 세트 수"
+            hint="4인 이하 1세트 · 5인 이상 2세트 권장"
+            right={
+              <Stepper
+                value={sets}
+                min={1}
+                max={3}
+                onChange={(v) => onUpdate({ cardSets: v })}
+              />
+            }
+          />
+          <SettingRow
+            label="목표 라운드"
+            right={
+              <Stepper
+                value={rounds}
+                min={3}
+                max={12}
+                onChange={(v) => onUpdate({ targetRounds: v })}
+              />
+            }
+          />
+          <SettingRow
+            label="턴당 제한 시간"
+            hint="초 단위"
+            right={
+              <Stepper
+                value={turnSec}
+                min={5}
+                max={60}
+                onChange={(v) => onUpdate({ turnLimitSec: v })}
+              />
+            }
+          />
+          <SettingRow
+            label="과세 (세금)"
+            hint="페온 상납 · 모몬티 반환"
+            right={
+              <Toggle
+                value={taxOn}
+                onChange={(v) =>
+                  onUpdate({
+                    taxationEnabled: v,
+                    revolutionEnabled: v ? revOn : false,
+                    greatRevolutionEnabled: v && revOn ? greatOn : false,
+                  })
+                }
+              />
+            }
+          />
+          <SettingRow
+            label="혁명"
+            hint={taxOn ? "광대 2장 보유 시 과세 취소" : "과세를 켜야 사용 가능"}
+            right={
+              <Toggle
+                value={revOn && taxOn}
+                onChange={(v) =>
+                  onUpdate({
+                    revolutionEnabled: v,
+                    greatRevolutionEnabled: v ? greatOn : false,
+                  })
+                }
+              />
+            }
+          />
+          <SettingRow
+            label="대혁명"
+            hint={
+              taxOn && revOn
+                ? "서열 완전 역전 (혁명 시)"
+                : "혁명을 켜야 사용 가능"
+            }
+            right={
+              <Toggle
+                value={greatOn && revOn && taxOn}
+                onChange={(v) => onUpdate({ greatRevolutionEnabled: v })}
+              />
+            }
+          />
+          <SettingRow
+            label="세금 결과 공개"
+            hint="과세 후 이동 내역 요약 표시"
+            right={
+              <Toggle
+                value={taxResult}
+                onChange={(v) => onUpdate({ taxResultVisible: v })}
+              />
+            }
+          />
+          <SettingRow
+            label="광대 잔류 페널티"
+            hint="라운드 끝까지 보유 시 −2"
+            right={
+              <Toggle
+                value={jesterOn}
+                onChange={(v) => onUpdate({ jesterPenalty: v })}
+              />
+            }
+          />
+          <SettingRow
+            label="쿼드 락"
+            hint="같은 숫자 4장 다 내면 즉시 클리어"
+            right={
+              <Toggle
+                value={quadOn}
+                onChange={(v) => onUpdate({ quadLock: v })}
+              />
+            }
+          />
+        </div>
+      ) : null}
+    </div>
   );
 }
 

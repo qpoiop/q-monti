@@ -357,14 +357,14 @@
   margin: 0 2px;
 }
 .pile-card {
-  width: 42px;
-  height: 58px;
+  width: clamp(36px, 10.5vw, 46px);
+  height: clamp(50px, 15vw, 64px);
   border-radius: 8px;
   background: linear-gradient(160deg, #fdfcff, #e7e2f5);
   color: #2a2350;
   font-family: var(--font-brand);
   font-weight: 800;
-  font-size: 20px;
+  font-size: clamp(16px, 5vw, 22px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -478,8 +478,8 @@
   flex: none;
 }
 .hand-card {
-  width: 30px;
-  height: 42px;
+  width: clamp(26px, 7.2vw, 32px);
+  height: clamp(36px, 10vw, 46px);
   border-radius: 7px;
   background: #fff;
   color: #2a2350;

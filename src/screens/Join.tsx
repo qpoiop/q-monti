@@ -7,8 +7,15 @@ import { DesktopStage } from "./DesktopStage";
 import { Hint } from "@web/design/layout";
 import "./join.css";
 
-const KEYS: string[] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "ABC", "0", "⌫"];
 const CODE_LEN = 6;
+const NUM_KEYS: string[] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "abc", "0", "⌫"];
+const ALPHA_KEYS: string[] = [
+  "A", "B", "C", "D", "E", "F",
+  "G", "H", "I", "J", "K", "L",
+  "M", "N", "O", "P", "Q", "R",
+  "S", "T", "U", "V", "W", "X",
+  "Y", "Z", "123", "⌫", "", "",
+];
 
 /**
  * Join screen.
@@ -25,14 +32,24 @@ const CODE_LEN = 6;
  */
 export function JoinScreen() {
   const [code, setCode] = useState("");
+  const [mode, setMode] = useState<"num" | "alpha">("num");
   const canSubmit = code.length === CODE_LEN;
+  const keys = mode === "num" ? NUM_KEYS : ALPHA_KEYS;
 
   function press(k: string) {
-    if (k === "⌫") setCode((c) => c.slice(0, -1));
-    else if (k === "ABC") {
-      const c = prompt("영문 입력") ?? "";
-      if (c) setCode((prev) => (prev + c.toUpperCase()).slice(0, CODE_LEN));
-    } else if (code.length < CODE_LEN) setCode((c) => c + k);
+    if (k === "⌫") {
+      setCode((c) => c.slice(0, -1));
+      return;
+    }
+    if (k === "abc") {
+      setMode("alpha");
+      return;
+    }
+    if (k === "123") {
+      setMode("num");
+      return;
+    }
+    if (code.length < CODE_LEN) setCode((c) => c + k);
   }
 
   return (
@@ -55,17 +72,23 @@ export function JoinScreen() {
             </div>
           </div>
           <div className="join-bottom">
-            <div className="keypad">
-              {KEYS.map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  className={k === "⌫" || k === "ABC" ? "secondary" : ""}
-                  onClick={() => press(k)}
-                >
-                  {k}
-                </button>
-              ))}
+            <div className={`keypad ${mode === "alpha" ? "keypad-alpha" : ""}`}>
+              {keys.map((k, i) =>
+                k === "" ? (
+                  <span key={`spacer-${i}`} className="keypad-spacer" aria-hidden />
+                ) : (
+                  <button
+                    key={k}
+                    type="button"
+                    className={
+                      k === "⌫" || k === "abc" || k === "123" ? "secondary" : ""
+                    }
+                    onClick={() => press(k)}
+                  >
+                    {k}
+                  </button>
+                )
+              )}
             </div>
             <Button
               full

@@ -601,9 +601,10 @@
 /* -------------------------- Code-entry cells -------------------------- */
 
 .code-cell {
-  width: 38px;
-  height: 52px;
-  border-radius: 11px;
+  flex: 1;
+  min-width: 0;
+  aspect-ratio: 3 / 4;
+  border-radius: 12px;
   background: var(--glass-3);
   border: 1px solid var(--glass-border-3);
   display: flex;
@@ -611,7 +612,7 @@
   justify-content: center;
   font-family: var(--font-brand);
   font-weight: 800;
-  font-size: 24px;
+  font-size: clamp(20px, 6vw, 26px);
   color: #fff;
 }
 .code-cell[data-focus="true"] {
@@ -632,6 +633,19 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   width: 100%;
+}
+.keypad.keypad-alpha {
+  grid-template-columns: repeat(6, 1fr);
+}
+.keypad.keypad-alpha button {
+  padding: 12px 0;
+  font-size: 15px;
+}
+.keypad.keypad-alpha button.secondary {
+  font-size: 13px;
+}
+.keypad-spacer {
+  visibility: hidden;
 }
 .keypad button {
   padding: 14px 0;
@@ -654,8 +668,59 @@
 }
 .code-cells {
   display: flex;
-  gap: 8px;
+  gap: clamp(6px, 1.6vw, 10px);
   justify-content: center;
+  width: 100%;
+}
+
+/* -------------------------- Lobby: room settings -------------------------- */
+
+.room-settings {
+  border-radius: 16px;
+  background: var(--glass-2);
+  border: 1px solid var(--glass-border-1);
+  overflow: hidden;
+}
+.room-settings-toggle {
+  width: 100%;
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+}
+.room-settings-title {
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 13px;
+}
+.room-settings-summary {
+  color: var(--text-4);
+  font-size: 11px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.room-settings-caret {
+  color: var(--text-4);
+  font-size: 12px;
+}
+.room-settings-body {
+  padding: 4px 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px dashed var(--glass-border-1);
+}
+.room-settings-body.readonly {
+  pointer-events: none;
+  opacity: 0.85;
 }
 
 /* -------------------------- Utility fonts -------------------------- */

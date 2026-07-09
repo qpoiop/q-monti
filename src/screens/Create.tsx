@@ -1,26 +1,31 @@
 import { useState } from "react";
 import { PhoneFrame } from "@web/design/PhoneFrame";
-import { Button, Card, ScreenHeader, SettingRow, Segmented, Stepper, Toggle } from "@web/design/primitives";
+import { Button, ScreenHeader, SettingRow, Segmented, Stepper } from "@web/design/primitives";
 import { getGame } from "@shared/games/registry";
 import { createRoomAndJoin, setName, useStore } from "@web/state/store";
 import { navigate } from "@web/nav/router";
 import { DesktopStage } from "./DesktopStage";
-import { FooterBar, SectionLabel, ScreenBody } from "@web/design/layout";
+import { FooterBar, Hint, SectionLabel, ScreenBody } from "@web/design/layout";
 
 /**
  * Momonty-only Create screen. Reads defaultConfig() from the game module
  * and renders a stable form. Everything is data-driven — swapping the
  * game just means pointing at a different module.
  */
+/**
+ * Create screen — room shell only. Game rules live in the lobby
+ * (host-editable), matching the mockup flow where the host tunes rules
+ * with everyone watching. Create screen answers "who are you, what's
+ * this room called, who can see it, how many seats"; nothing else.
+ */
 export function CreateScreen() {
   const game = getGame("momonty");
-  const [config, setConfig] = useState<any>(game.defaultConfig());
+  const defaults = game.defaultConfig();
   const [roomName, setRoomName] = useState("모몬티 왕좌");
   const [isPrivate, setIsPrivate] = useState(true);
   const [maxPlayers, setMaxPlayers] = useState(Math.min(6, game.maxPlayers));
   const displayName = useStore((s) => s.session.displayName);
   const [name, setDN] = useState(displayName);
-  const set = (patch: any) => setConfig({ ...config, ...patch });
 
   return (
     <DesktopStage>
@@ -61,38 +66,16 @@ export function CreateScreen() {
           </div>
           <SettingRow
             label="최대 인원"
-            right={<Stepper value={maxPlayers} min={game.minPlayers} max={game.maxPlayers} onChange={setMaxPlayers} />}
+            right={
+              <Stepper
+                value={maxPlayers}
+                min={game.minPlayers}
+                max={game.maxPlayers}
+                onChange={setMaxPlayers}
+              />
+            }
           />
-          <SectionLabel>게임 규칙</SectionLabel>
-          <SettingRow
-            label="과세 (세금)"
-            hint="페온 2·2 / 레서 1·1 교환"
-            right={<Toggle value={config.taxationEnabled} onChange={(v) => set({ taxationEnabled: v })} />}
-          />
-          <SettingRow
-            label="혁명"
-            hint="광대 2장 보유 시 과세 취소"
-            right={<Toggle value={config.revolutionEnabled} onChange={(v) => set({ revolutionEnabled: v })} />}
-          />
-          <SettingRow
-            label="대혁명"
-            hint="모몬티↔페온 서열 완전 역전"
-            right={<Toggle value={config.greatRevolutionEnabled} onChange={(v) => set({ greatRevolutionEnabled: v })} />}
-          />
-          <SettingRow
-            label="광대 잔류 페널티"
-            hint="라운드 끝까지 보유 시 −2"
-            right={<Toggle value={config.jesterPenalty} onChange={(v) => set({ jesterPenalty: v })} />}
-          />
-          <SettingRow
-            label="같은 숫자 락 (Quad Lock)"
-            hint="같은 숫자 4장 다 내면 즉시 클리어"
-            right={<Toggle value={config.quadLock} onChange={(v) => set({ quadLock: v })} />}
-          />
-          <SettingRow
-            label="목표 라운드"
-            right={<Stepper value={config.targetRounds} min={3} max={12} onChange={(v) => set({ targetRounds: v })} />}
-          />
+          <Hint>세금·혁명·목표 라운드 같은 게임 규칙은 방 만든 뒤 대기실에서 조정할 수 있어요.</Hint>
         </ScreenBody>
         <FooterBar>
           <Button
@@ -103,7 +86,7 @@ export function CreateScreen() {
                 roomName,
                 isPrivate,
                 maxPlayers,
-                config,
+                config: defaults,
               })
             }
           >
