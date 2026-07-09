@@ -282,6 +282,17 @@
   font-size: 26px;
   animation: emoji-pulse 1.4s ease-in-out infinite;
 }
+.spinner-static {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  margin: 0 auto 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass-3);
+  border: 1px solid var(--glass-border-2);
+}
 @keyframes spin {
   to {
     transform: rotate(360deg);
