@@ -5,6 +5,7 @@ import { DrawRank } from "./DrawRank";
 import { Taxation } from "./Taxation";
 import { PlayTrick } from "./PlayTrick";
 import { RoundEnd } from "./RoundEnd";
+import { MatchEnd } from "./MatchEnd";
 
 /**
  * Client-side phase view registry. `viewKey` in the shared phase spec is
@@ -18,6 +19,6 @@ export const PHASE_VIEWS: Record<
   Taxation,
   PlayTrick,
   RoundEnd,
-  MatchEnd: RoundEnd, // reuse rank list for match end within play surface
+  MatchEnd,
   RankReveal: RoundEnd,
 };

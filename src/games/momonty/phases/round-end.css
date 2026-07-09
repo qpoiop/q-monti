@@ -1,0 +1,148 @@
+/*
+ * Round-end / rank reveal — matches mockup § 5-2.
+ * Rank list with tiered colours; jester callout when the option is on;
+ * gentle CTA-style banner at bottom telling the user what happens next.
+ */
+
+.round-end {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 8px;
+  flex: 1;
+  min-height: 0;
+}
+.round-end-heading {
+  text-align: center;
+  padding: 6px 4px;
+}
+.round-end-eyebrow {
+  color: var(--accent-1);
+  font-family: var(--font-brand);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+.round-end-title {
+  color: #fff;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 17px;
+  margin-top: 4px;
+}
+
+/* -------------------------- Rank list -------------------------- */
+
+.rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.rank-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--glass-3);
+  border: 1px solid var(--glass-border-2);
+}
+.rank-row[data-tier="top-1"] {
+  background: linear-gradient(135deg, rgba(242, 193, 78, 0.28), rgba(242, 193, 78, 0.1));
+  border-color: rgba(242, 193, 78, 0.5);
+}
+.rank-row[data-tier="top-2"] {
+  background: rgba(214, 179, 255, 0.12);
+  border-color: rgba(214, 179, 255, 0.3);
+}
+.rank-row[data-tier="bottom-2"] {
+  background: rgba(127, 176, 232, 0.1);
+  border-color: rgba(127, 176, 232, 0.28);
+}
+.rank-row[data-tier="bottom-1"] {
+  background: rgba(138, 130, 152, 0.12);
+  border-color: rgba(138, 130, 152, 0.3);
+}
+.rank-avatar {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex: none;
+}
+.rank-name {
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rank-me-tag {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--accent-3);
+  font-size: 9px;
+  font-family: var(--font-brand);
+  font-weight: 800;
+}
+.rank-pos {
+  color: var(--text-4);
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--glass-2);
+}
+.rank-role {
+  color: var(--text-5);
+  font-family: var(--font-brand);
+  font-weight: 700;
+  font-size: 10.5px;
+}
+.rank-row[data-tier="top-1"] .rank-role {
+  color: var(--accent-3);
+}
+.rank-row[data-tier="top-2"] .rank-role {
+  color: var(--rank-lesser-momonty);
+}
+.rank-row[data-tier="bottom-2"] .rank-role {
+  color: var(--rank-lesser-peon);
+}
+.rank-row[data-tier="bottom-1"] .rank-role {
+  color: var(--rank-peon);
+}
+
+/* -------------------------- Callouts -------------------------- */
+
+.round-end-callout {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(200, 85, 240, 0.1);
+  border: 1px solid rgba(200, 85, 240, 0.28);
+  color: #e0b6ff;
+  font-size: 11px;
+  text-align: center;
+}
+
+.round-end-cta {
+  margin-top: auto;
+  padding: 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--brand-purple-1), var(--brand-purple-2));
+  color: #fff;
+  text-align: center;
+  box-shadow: 0 14px 26px -10px var(--brand-purple-glow);
+}
+.round-end-cta-label {
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 14px;
+}
