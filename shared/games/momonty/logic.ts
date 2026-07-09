@@ -185,7 +185,8 @@ export type MomontyAction =
   | { t: "returnCards"; cardIds: string[] }
   | { t: "declareRevolution" }
   | { t: "playCards"; cardIds: string[]; wildAsValue?: number; straightLength?: number }
-  | { t: "pass" };
+  | { t: "pass" }
+  | { t: "confirmRoundEnd" };
 
 /* -------------------------- Helpers -------------------------- */
 
@@ -854,8 +855,14 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
       return { state, events };
     }
 
+    if (state.phase === "ROUND_END" && action.t === "confirmRoundEnd") {
+      // Advance into the next round's setup. Ranks were already stored
+      // by endRound(); beginRound() reads them to compute pending tax.
+      state.round += 1;
+      beginRound(state, rng);
+      return { state, events };
+    }
     if (state.phase === "ROUND_END") {
-      // No player actions from this phase — round ends via internal timers/UI-advance.
       throw new Error("no actions available");
     }
     throw new Error(`invalid action for phase ${state.phase}`);
@@ -930,8 +937,11 @@ function endRound(state: MomontyState, rng: Rng, events: GameEvent[]): void {
     events.push({ type: "matchEnd", payload: { ranks } });
     return;
   }
-  state.round += 1;
-  beginRound(state, rng);
+  // Pause at ROUND_END so the resolved ranks stay on-screen. The client
+  // (or a bot policy) sends `confirmRoundEnd` when the reader is ready
+  // to move to the next round. Previously we jumped straight into
+  // beginRound and testers only saw the ranks for a split second.
+  state.phase = "ROUND_END";
 }
 
 /* -------------------------- Helpers cont'd -------------------------- */

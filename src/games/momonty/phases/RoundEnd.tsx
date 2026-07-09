@@ -91,14 +91,20 @@ export function RoundEnd({ view }: { view: MomontyView }) {
         >
           {view.config.taxationEnabled ? "과세 단계로 ▶" : "게임 시작 ▶"}
         </button>
-      ) : (
+      ) : view.phase === "MATCH_END" ? (
         <div className="round-end-cta">
           <span className="round-end-cta-label">
-            {view.phase === "MATCH_END"
-              ? "🏆 매치 종료 · 결과 화면으로 이동"
-              : `라운드 ${view.round + 1} · 과세로 자동 이동 ▶`}
+            🏆 매치 종료 · 결과 화면으로 이동
           </span>
         </div>
+      ) : (
+        <button
+          type="button"
+          className="round-end-primary-cta"
+          onClick={() => send({ t: "action", action: { t: "confirmRoundEnd" } })}
+        >
+          라운드 {view.round + 1}{view.config.taxationEnabled ? " · 과세로 ▶" : " 시작 ▶"}
+        </button>
       )}
     </div>
   );

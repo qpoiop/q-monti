@@ -222,6 +222,7 @@ function seatToDrive(state: MomontyState, humanSeatId: string): string | null {
 function botAction(state: MomontyState, seatId: string): MomontyAction | null {
   if (state.phase === "DRAWING_RANK") return { t: "drawRank" };
   if (state.phase === "RANK_REVEAL") return { t: "confirmRanks" };
+  if (state.phase === "ROUND_END") return { t: "confirmRoundEnd" };
   if (state.phase === "TAXATION") {
     const hand = state.hands[seatId] ?? [];
     const owe = state.taxation.pendingUploads[seatId] ?? 0;
