@@ -340,25 +340,14 @@ export function ScreenHeader({
   onBack?: () => void;
 }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "12px 16px 8px",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+    <div className="screen-header">
+      <div className="screen-header-left">
         {onBack ? (
-          <button
-            type="button"
-            onClick={onBack}
-            style={{ color: "var(--text-4)", fontSize: 16 }}
-          >
+          <button type="button" onClick={onBack} className="back-btn" aria-label="back">
             ←
           </button>
         ) : null}
-        <span style={{ color: "var(--text-1)", fontWeight: 700, fontSize: 15 }}>{title}</span>
+        <span className="screen-header-title">{title}</span>
       </div>
       {right}
     </div>

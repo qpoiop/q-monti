@@ -1,13 +1,10 @@
 import type { ReactNode } from "react";
 
 /**
- * A neutral scroll container centring a phone-sized surface — on desktop
- * looks like a mockup; on mobile it fills the viewport.
+ * Root stage. On mobile the screen fills the viewport; on desktop it
+ * gets a 420-wide column centred on the dark surface base — matches how
+ * real mobile PWAs render when opened in a desktop browser.
  */
 export function DesktopStage({ children }: { children: ReactNode }) {
-  return (
-    <div className="desktop-stage">
-      <div className="desktop-stage-inner">{children}</div>
-    </div>
-  );
+  return <div className="stage">{children}</div>;
 }

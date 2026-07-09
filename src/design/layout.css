@@ -4,87 +4,47 @@
  * language stays consistent and diffs stay legible.
  */
 
-/* -------------------------- Phone frame -------------------------- */
-
-.desktop-stage {
-  height: 100dvh;
-  width: 100vw;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-.desktop-stage-inner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+/* -------------------------- Stage + screen shell -------------------------- */
 
 /*
- * `--phone-scale` (JS-set from window.innerWidth/height) preserves the
- * mockup's 280×620 design and scales it uniformly to fill the actual
- * viewport. The `.phone-scaler` wrapper reserves the resulting *visual*
- * dimensions so the flex parent centres the frame correctly, while the
- * `.phone-outer` transform does the actual scaling — this gives us
- * responsive proportions without touching a single per-element px value.
+ * Stage = root container.
+ *   Mobile: shell fills the viewport (native app feel).
+ *   Desktop: shell renders as a 440-wide mobile-shaped column, centred
+ *   on the dark base — same pattern real mobile PWAs use when viewed
+ *   in a desktop browser.
  */
-.phone-scaler {
-  width: calc(280px * var(--phone-scale, 1));
-  height: calc(620px * var(--phone-scale, 1));
-  flex: none;
-}
-.phone-outer {
-  width: 280px;
-  height: 620px;
-  padding: 10px;
-  background: var(--surface-frame);
-  border-radius: 40px;
-  box-shadow: var(--shadow-frame), inset 0 0 0 2px var(--surface-frame-ring);
-  transform: scale(var(--phone-scale, 1));
-  transform-origin: top left;
-}
-.phone-inner {
-  position: relative;
-  width: 260px;
-  height: 600px;
-  border-radius: 32px;
-  overflow: hidden;
-}
-.phone-status {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 36px;
+.stage {
+  width: 100vw;
+  min-height: 100dvh;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-2);
-  font-family: var(--font-brand);
-  z-index: 30;
+  justify-content: center;
+  align-items: stretch;
+  background: var(--surface-base);
 }
-.phone-content {
-  position: absolute;
-  top: 36px;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 10;
+.screen-shell {
+  flex: 1;
+  width: 100%;
+  min-height: 100dvh;
+  max-width: 440px;
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--glass-border-1);
 }
-
-/*
- * Mobile / narrow viewport tweaks. Desktop stays flex-centered as-is;
- * on portrait / narrow it centres against the (scaled) visual box.
- */
-@media (max-width: 900px), (orientation: portrait) {
-  .desktop-stage {
-    align-items: center;
-    padding: 0;
+.screen-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@media (min-width: 900px) {
+  .screen-shell {
+    min-height: min(880px, calc(100dvh - 32px));
+    border-radius: 32px;
+    margin: clamp(16px, 3vh, 40px) 0;
   }
 }
 
@@ -148,17 +108,18 @@
 }
 
 .screen-body {
-  padding: 8px 16px 0;
+  padding: 12px 20px 8px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   overflow-y: auto;
   flex: 1;
   min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 .screen-body-tight {
-  padding: 8px 14px 0;
-  gap: 8px;
+  padding: 8px 18px 0;
+  gap: 10px;
 }
 .screen-body-center {
   align-items: center;
@@ -167,7 +128,7 @@
 
 .footer-bar {
   margin-top: auto;
-  padding: 12px 16px 16px;
+  padding: 12px 20px calc(16px + env(safe-area-inset-bottom));
   display: flex;
   gap: 8px;
 }
@@ -243,18 +204,18 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px 8px;
+  padding: calc(12px + env(safe-area-inset-top)) 20px 8px;
   gap: 10px;
 }
 .phase-header .title {
   color: var(--text-1);
   font-family: var(--font-brand);
   font-weight: 800;
-  font-size: 15px;
+  font-size: 16px;
 }
 .phase-header .sub {
   color: var(--text-5);
-  font-size: 11px;
+  font-size: 12px;
   margin-top: 2px;
 }
 
@@ -263,6 +224,42 @@
   align-items: center;
   gap: 8px;
   flex: none;
+}
+.screen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(14px + env(safe-area-inset-top)) 20px 10px;
+  gap: 10px;
+  flex: none;
+}
+.screen-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.screen-header-title {
+  color: var(--text-1);
+  font-weight: 700;
+  font-size: 16px;
+  font-family: var(--font-body);
+}
+.back-btn {
+  color: var(--text-4);
+  font-size: 20px;
+  line-height: 1;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  cursor: pointer;
+}
+.back-btn:hover {
+  background: var(--glass-2);
 }
 
 /* -------------------------- Overlay surfaces -------------------------- */
