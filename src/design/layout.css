@@ -4,6 +4,31 @@
  * language stays consistent and diffs stay legible.
  */
 
+/* -------------------------- Desktop stage -------------------------- */
+
+.desktop-stage {
+  height: 100dvh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.desktop-stage-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media (max-width: 640px) {
+  .desktop-stage {
+    align-items: flex-start;
+  }
+  .desktop-stage-inner {
+    width: 100vw;
+    min-height: 100dvh;
+  }
+}
+
 /* -------------------------- Structural -------------------------- */
 
 .stack {
@@ -223,6 +248,52 @@
 }
 .dialog-actions {
   margin-top: 18px;
+}
+
+/* -------------------------- Spinner ring -------------------------- */
+
+.spinner-ring {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  margin: 0 auto 4px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: conic-gradient(
+    from 0turn,
+    var(--accent-1) 0deg,
+    var(--accent-1) 90deg,
+    rgba(255, 255, 255, 0.08) 90deg 360deg
+  );
+  animation: spin 1s linear infinite;
+}
+.spinner-ring::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: var(--surface-2);
+}
+.spinner-emoji {
+  position: relative;
+  z-index: 1;
+  font-size: 26px;
+  animation: emoji-pulse 1.4s ease-in-out infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes emoji-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
 }
 
 .bottom-sheet {
@@ -459,11 +530,19 @@
   border: 2px solid var(--accent-1);
   box-shadow: 0 0 12px var(--accent-glow);
 }
+.caret {
+  display: inline-block;
+  width: 1px;
+  height: 22px;
+  background: var(--accent-1);
+  animation: m-blink 1s infinite;
+}
 
 .keypad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
+  width: 100%;
 }
 .keypad button {
   padding: 14px 0;
@@ -474,11 +553,20 @@
   font-weight: 700;
   font-size: 18px;
   cursor: pointer;
+  border: none;
+}
+.keypad button:active {
+  transform: scale(0.97);
 }
 .keypad button.secondary {
   font-size: 14px;
   color: var(--text-5);
   background: var(--glass-2);
+}
+.code-cells {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
 }
 
 /* -------------------------- Utility fonts -------------------------- */

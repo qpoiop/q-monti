@@ -1,21 +1,13 @@
 import type { GameMeta, GameModule } from "../engine";
 import { momontyGame } from "./momonty/logic";
-import { querymoGame } from "./querymo/logic";
-import { binchiGame } from "./binchi/logic";
-import { indientGame } from "./indient/logic";
-import { moorumonGame } from "./moorumon/logic";
 
 /**
- * Central registry — the ONLY place the app enumerates supported games.
- * Both server DO and web client import this and use it to look up
- * game modules by id.
+ * Single-game registry. Service currently ships Momonty only.
+ * If more titles are added later, register them here — the client and
+ * worker both dispatch via this map, so nothing else needs to change.
  */
 export const GAMES: Record<string, GameModule<any, any, any, any>> = {
   [momontyGame.id]: momontyGame,
-  [querymoGame.id]: querymoGame,
-  [binchiGame.id]: binchiGame,
-  [indientGame.id]: indientGame,
-  [moorumonGame.id]: moorumonGame,
 };
 
 export const GAME_META: GameMeta[] = Object.values(GAMES).map((g) => ({

@@ -1,32 +1,28 @@
 import type { Route } from "@web/state/store";
+import { getState, goto, subscribe } from "@web/state/store";
 
 /**
- * History-integrated router.
+ * History-integrated router. Momonty-only.
  *
- * Every route change pushes an entry to `history` so hardware/browser back
- * navigates the app stack instead of leaving. Home is the base entry — if
- * the user presses back on Home we intercept and ask them to confirm exit.
+ *   /             → home
+ *   /create       → create room
+ *   /join         → join by code
+ *   /lobby        → lobby
+ *   /play         → play surface
+ *   /result       → match end
  *
- * The store is the source of truth. `navigate()` writes both `history` and
- * `store.route`. `popstate` reconciles the store from the new history state.
- *
- * Route guards enforce preconditions: e.g. `play` requires a room in
- * `playing` phase; `lobby` requires a room. If a guard fails we bounce back.
+ * Route guards keep the store consistent: play needs `room.phase==='playing'`,
+ * lobby needs a room, etc. Home back-press shows an exit confirm dialog.
  */
-
-import { getState, goto, subscribe } from "@web/state/store";
 
 const STATE_KEY = "momonti.route";
 
-/** Serialize a route into a URL path for shareable back-restore. */
 function routeToPath(r: Route): string {
   switch (r.name) {
     case "home":
       return "/";
-    case "library":
-      return "/library";
     case "create":
-      return `/create/${r.gameId}`;
+      return "/create";
     case "join":
       return "/join";
     case "lobby":
@@ -40,8 +36,7 @@ function routeToPath(r: Route): string {
 
 function pathToRoute(path: string): Route {
   if (path === "/" || path === "") return { name: "home" };
-  if (path.startsWith("/library")) return { name: "library" };
-  if (path.startsWith("/create/")) return { name: "create", gameId: path.slice(8) || "momonty" };
+  if (path.startsWith("/create")) return { name: "create" };
   if (path.startsWith("/join")) return { name: "join" };
   if (path.startsWith("/lobby")) return { name: "lobby" };
   if (path.startsWith("/play")) return { name: "play" };
@@ -68,15 +63,53 @@ function emitConfirm(v: boolean): void {
 export function closeExitConfirm(): void {
   emitConfirm(false);
 }
+
+/**
+ * Exit the app.
+ *
+ * Priority:
+ *   1. If running as an installed PWA (standalone display-mode), we
+ *      opened the window with the launch — `window.close()` is allowed.
+ *   2. On mobile browsers, replace the doc with a "가셨어요" farewell
+ *      so users see a clear exit state and the tab can be swiped away.
+ *   3. As a last resort, navigate to `about:blank`.
+ */
 export function confirmExit(): void {
   emitConfirm(false);
-  // Best-effort — PWAs can close their window; browser tabs cannot be
-  // programmatically closed unless script-opened. We navigate home as a
-  // graceful fallback and rely on the user's hardware back to finish.
-  history.length > 1 ? history.back() : (window.location.href = "about:blank");
+  // window.close() only works for script-opened windows or the initial
+  // page in a PWA/tabless standalone context. In every other case it's a
+  // silent no-op — so we always follow up with a farewell view. Users
+  // then explicitly swipe the tab away.
+  try {
+    window.close();
+  } catch {
+    /* ignore */
+  }
+  // Detach React from the DOM first so its next commit does not overwrite
+  // the farewell markup, then replace document.documentElement.
+  const root = document.getElementById("root");
+  if (root) root.remove();
+  showFarewell();
 }
 
-/** Route guard — returns the *effective* route the user is allowed to see. */
+function showFarewell(): void {
+  document.documentElement.innerHTML = `
+    <head><meta charset="utf-8"><title>모몬티</title>
+    <style>
+      html,body{margin:0;height:100%;background:#120e26;color:#f4f2ff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;text-align:center}
+      .box{padding:24px}
+      .k{font-family:'Outfit',sans-serif;font-weight:900;font-size:34px;background:linear-gradient(135deg,#f2c14e,#c855f0);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:.02em}
+      .s{color:#b8b0d8;margin-top:10px;font-size:14px}
+      a{color:#f8d98a;margin-top:20px;display:inline-block;text-decoration:none;padding:10px 18px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);font-size:13px}
+    </style>
+    </head>
+    <body><div class="box">
+      <div class="k">모몬티</div>
+      <div class="s">즐거운 왕좌였어요 👑</div>
+      <a href="/">다시 열기</a>
+    </div></body>`;
+}
+
 function guard(r: Route): Route {
   const s = getState();
   const inRoom = !!s.room;
@@ -94,7 +127,6 @@ function guard(r: Route): Route {
       break;
     case "create":
     case "join":
-    case "library":
     case "home":
       break;
   }
@@ -103,7 +135,6 @@ function guard(r: Route): Route {
 
 let syncingFromHistory = false;
 
-/** Push a new route, respecting guards. */
 export function navigate(r: Route, opts: { replace?: boolean } = {}): void {
   const effective = guard(r);
   pushHistory(effective, opts.replace);
@@ -117,7 +148,6 @@ function pushHistory(r: Route, replace = false): void {
   else history.pushState(state, "", path);
 }
 
-/** Initialize router — called once from App. */
 export function initRouter(): void {
   const initialPath = window.location.pathname || "/";
   const initialRoute = guard(pathToRoute(initialPath));
@@ -141,7 +171,6 @@ export function initRouter(): void {
     syncingFromHistory = false;
   });
 
-  // Mirror any store-driven route change (e.g. server-triggered lobby→play) into history.
   let lastPath = routeToPath(getState().route);
   subscribe(() => {
     if (syncingFromHistory) return;
@@ -153,7 +182,6 @@ export function initRouter(): void {
     }
   });
 
-  // beforeunload guard — mid-game accidental refresh confirmation.
   window.addEventListener("beforeunload", (e) => {
     const s = getState();
     if (s.room && s.room.phase === "playing") {

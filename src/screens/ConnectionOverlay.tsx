@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
-import { useStore } from "@web/state/store";
-import { DialogCard, OverlayScrim, Stack } from "@web/design/layout";
+import { leaveRoom, retryConnection, useStore } from "@web/state/store";
+import { navigate } from "@web/nav/router";
+import { DialogCard, OverlayScrim, Row } from "@web/design/layout";
+import { Button } from "@web/design/primitives";
 
 /**
- * Overlay whenever the WS is not `connected`. `idle` (no room yet) is
- * treated as a normal application state and does not show an overlay.
- * When we ARE in a room, we surface a live countdown mirroring the
- * server-side OFFLINE_DROP_MS (10 min) so users understand the grace.
+ * Connection overlay.
+ *
+ * Idle → hidden (no room to connect to yet).
+ * Connecting → shimmering ring around a ⚡ emoji + label.
+ * Reconnecting / closed → ring + countdown ("자리 유지 · X:XX 남음") when
+ *   we're in a room. Below the label: retry + 방 나가기 actions.
+ *
+ * The ring is a pure-CSS conic spinner around the emoji so nothing hits
+ * the JS timer on every frame.
  */
 const GRACE_MS = 10 * 60 * 1000;
 
@@ -29,9 +36,10 @@ export function ConnectionOverlay() {
   if (status === "connected" || status === "idle") return null;
 
   const remainingMs = Math.max(0, GRACE_MS - (startedAt ? Date.now() - startedAt : 0));
-  const remMin = Math.floor(remainingMs / 60000);
-  const remSec = Math.floor((remainingMs % 60000) / 1000);
-  const countdown = `${remMin}:${String(remSec).padStart(2, "0")}`;
+  const countdown =
+    inRoom && (status === "reconnecting" || status === "closed")
+      ? `${Math.floor(remainingMs / 60000)}:${String(Math.floor((remainingMs % 60000) / 1000)).padStart(2, "0")}`
+      : "";
 
   const [title, sub] =
     status === "connecting"
@@ -43,9 +51,30 @@ export function ConnectionOverlay() {
   return (
     <OverlayScrim align="center">
       <DialogCard>
-        <div style={{ fontSize: 26 }}>⚡</div>
+        <div className="spinner-ring">
+          <span className="spinner-emoji">⚡</span>
+        </div>
         <div className="dialog-title">{title}</div>
         <div className="dialog-sub">{sub}</div>
+        {status === "closed" || (status === "reconnecting" && inRoom) ? (
+          <Row gap={8} className="dialog-actions">
+            {inRoom ? (
+              <Button
+                full
+                variant="ghost"
+                onClick={() => {
+                  leaveRoom();
+                  navigate({ name: "home" });
+                }}
+              >
+                방 나가기
+              </Button>
+            ) : null}
+            <Button full variant="primary" onClick={retryConnection}>
+              다시 시도
+            </Button>
+          </Row>
+        ) : null}
       </DialogCard>
     </OverlayScrim>
   );

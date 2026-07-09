@@ -26,14 +26,19 @@ body {
   color: var(--text-1);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-  min-height: 100dvh;
+  overflow: hidden;
+  height: 100dvh;
 }
 @media (max-width: 640px) {
   body {
     /* On real phones we hide the desktop mockup padding so the frame fills. */
     background: var(--surface-base);
   }
+}
+.route-swap {
+  animation: m-fade-in var(--dur-med) var(--easing) both;
+  height: 100%;
+  min-height: 100dvh;
 }
 button {
   font-family: inherit;

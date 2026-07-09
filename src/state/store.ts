@@ -18,10 +18,10 @@ export interface AppState {
   toast?: { text: string; ts: number };
 }
 
+/** Momonty-only routes. */
 export type Route =
   | { name: "home" }
-  | { name: "library" }
-  | { name: "create"; gameId: string }
+  | { name: "create" }
   | { name: "join" }
   | { name: "lobby" }
   | { name: "play" }
@@ -97,7 +97,7 @@ function handleServerMessage(m: S2C): void {
           : m.room.phase === "ended"
           ? { name: "result" as const }
           : m.room.phase === "lobby" &&
-            (cur.name === "home" || cur.name === "library" || cur.name === "create")
+            (cur.name === "home" || cur.name === "create")
           ? { name: "lobby" as const }
           : cur;
       setState({ room: m.room, route: next });
@@ -128,9 +128,8 @@ export function send(msg: C2S): void {
   getTransport().send(msg);
 }
 
-/** Host action — creates a new room via HTTP then opens the WS to it. */
+/** Host action — Momonty-only; creates room via HTTP then opens WS. */
 export async function createRoomAndJoin(args: {
-  gameId: string;
   roomName?: string;
   isPrivate?: boolean;
   maxPlayers: number;
@@ -138,10 +137,8 @@ export async function createRoomAndJoin(args: {
 }): Promise<void> {
   const t = getTransport();
   t.close();
-  const { code } = await api.newRoom(args.gameId);
-  setState({
-    toast: { text: `방 코드: ${code}`, ts: Date.now() },
-  });
+  const { code } = await api.newRoom("momonty");
+  setState({ toast: { text: `방 코드: ${code}`, ts: Date.now() } });
   t.connect(code, {
     seedMeta: {
       roomName: args.roomName,
@@ -150,12 +147,10 @@ export async function createRoomAndJoin(args: {
     },
   });
   if (args.config != null) {
-    // Fire after connect settles — transport queues until open.
     t.send({ t: "setConfig", config: args.config });
   }
 }
 
-/** Joiner action — validates code exists, then opens the WS. */
 export async function joinRoomByCode(code: string): Promise<boolean> {
   const t = getTransport();
   t.close();
@@ -173,6 +168,15 @@ export function leaveRoom(): void {
   t.send({ t: "leaveRoom" });
   t.close();
   setState({ room: undefined, gameView: undefined });
+}
+
+/** Attempt to reconnect to the currently-armed room. Used by overlays. */
+export function retryConnection(): void {
+  const room = current.room;
+  const t = getTransport();
+  if (room?.code) {
+    t.connect(room.code);
+  }
 }
 
 export function goto(route: Route): void {

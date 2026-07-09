@@ -6,16 +6,8 @@ import type { ReactNode } from "react";
  */
 export function DesktopStage({ children }: { children: ReactNode }) {
   return (
-    <div
-      style={{
-        minHeight: "100dvh",
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "center",
-        padding: "clamp(0px, 3vw, 48px) clamp(0px, 3vw, 24px)",
-      }}
-    >
-      {children}
+    <div className="desktop-stage">
+      <div className="desktop-stage-inner">{children}</div>
     </div>
   );
 }

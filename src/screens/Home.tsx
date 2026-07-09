@@ -6,9 +6,19 @@ import { DesktopStage } from "./DesktopStage";
 import { Aurora } from "@web/design/effects/Aurora";
 import { Particles } from "@web/design/effects/Particles";
 import { openRules } from "./RulesSheet";
-import { Row, Stack } from "@web/design/layout";
+import { Stack } from "@web/design/layout";
 import "./home.css";
 
+/**
+ * Home screen. Mirrors the mockup:
+ *   - 3-card fanned logo (2 outer at ±14°, 1 gold-ringed center card with 👑 + "1")
+ *   - Big brand title + subtitle
+ *   - 3 CTA buttons (primary/ghost/accent-soft)
+ *   - Bottom pill row: avatar + name + rules chip
+ *
+ * All fixed offsets match the design HTML pixel-for-pixel; the 280×600
+ * PhoneFrame guarantees consistent proportions.
+ */
 export function HomeScreen() {
   const displayName = useStore((s) => s.session.displayName);
   return (
@@ -17,13 +27,18 @@ export function HomeScreen() {
         <Aurora tone="gold" />
         <Particles variant="gold-shimmer" density={0.9} />
         <div className="home-body">
-          <div className="home-hero">
-            <MomontyLogoMark />
-            <div className="home-title">모몬티</div>
-            <div className="home-subtitle">낮은 숫자가 왕이 되는 서열 대전</div>
+          <div className="home-logo" aria-label="모몬티 카드 로고">
+            <span className="card card-l" />
+            <span className="card card-r" />
+            <span className="card card-c">
+              <span className="crown">👑</span>
+              <span className="rank">1</span>
+            </span>
           </div>
+          <div className="home-title">모몬티</div>
+          <div className="home-subtitle">낮은 숫자가 왕이 되는 서열 대전</div>
           <Stack gap={10} className="home-ctas">
-            <Button full variant="primary" onClick={() => navigate({ name: "library" })}>
+            <Button full variant="primary" onClick={() => navigate({ name: "create" })}>
               방 만들기
             </Button>
             <Button full variant="ghost" onClick={() => navigate({ name: "join" })}>
@@ -34,7 +49,7 @@ export function HomeScreen() {
             </Button>
           </Stack>
           <div className="home-profile">
-            <span className="seat-avatar">{(displayName[0] || "?").toUpperCase()}</span>
+            <span className="seat-avatar avatar-brand">{(displayName[0] || "?").toUpperCase()}</span>
             <span className="home-name">{displayName}</span>
             <button type="button" className="chip-btn push-right" onClick={() => openRules("momonty")}>
               규칙 ⓘ
@@ -44,8 +59,4 @@ export function HomeScreen() {
       </PhoneFrame>
     </DesktopStage>
   );
-}
-
-function MomontyLogoMark() {
-  return <div className="home-logo" aria-label="모몬티" />;
 }

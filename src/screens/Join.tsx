@@ -3,17 +3,19 @@ import { PhoneFrame } from "@web/design/PhoneFrame";
 import { Button, ScreenHeader } from "@web/design/primitives";
 import { joinRoomByCode } from "@web/state/store";
 import { navigate } from "@web/nav/router";
-// navigate used only by the back button below
 import { DesktopStage } from "./DesktopStage";
-import { FooterBar, Hint, Row, ScreenBody, Stack } from "@web/design/layout";
+import { FooterBar, Hint, ScreenBody } from "@web/design/layout";
 
-/**
- * Data-driven keypad — layout stays declarative so the 12-key grid maps
- * one-to-one with a config array. No branchy per-key styling in JSX.
- */
 const KEYS: string[] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "ABC", "0", "⌫"];
 const CODE_LEN = 6;
 
+/**
+ * Code-entry screen. Layout mirrors the design mockup exactly:
+ *   header · hint · 6 code cells · keypad grid · footer CTA.
+ * Cells render `data-focus="true"` on the active slot so the CSS
+ * handles the accent border + blinking cursor — no per-cell inline
+ * styling.
+ */
 export function JoinScreen() {
   const [code, setCode] = useState("");
   const canSubmit = code.length === CODE_LEN;
@@ -32,14 +34,14 @@ export function JoinScreen() {
         <ScreenHeader title="코드로 입장" onBack={() => navigate({ name: "home" })} />
         <ScreenBody>
           <Hint>방장이 공유한 {CODE_LEN}자리 코드를 입력하세요</Hint>
-          <Row center gap={6} className="row-tight">
+          <div className="code-cells">
             {Array.from({ length: CODE_LEN }).map((_, i) => (
               <span key={i} className="code-cell" data-focus={code.length === i ? "true" : "false"}>
-                {code[i] ?? ""}
+                {code[i] ?? (code.length === i ? <span className="caret" /> : "")}
               </span>
             ))}
-          </Row>
-          <div className="keypad">
+          </div>
+          <div className="keypad" style={{ marginTop: 8 }}>
             {KEYS.map((k) => (
               <button
                 key={k}
@@ -57,12 +59,7 @@ export function JoinScreen() {
             full
             variant="primary"
             disabled={!canSubmit}
-            onClick={() =>
-              // Server-sent `roomState` transitions us into the lobby once
-              // the WS handshake completes. Route guard would bounce a
-              // premature `navigate({name: "lobby"})` back to home.
-              joinRoomByCode(code)
-            }
+            onClick={() => joinRoomByCode(code)}
           >
             입장하기 ▶
           </Button>

@@ -25,10 +25,11 @@ export function PhoneFrame({
     typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches;
   const showBezel = !isMobile && !fullBleed;
 
+  // Design mockup ships a 280 × 600 device — mirror it exactly on desktop.
+  // On mobile the frame fills the viewport (safe-area aware).
   const outerStyle: CSSProperties = showBezel
     ? {
-        width: "var(--phone-width)",
-        maxWidth: 460,
+        width: 280,
         borderRadius: 40,
         padding: 10,
         background: "var(--surface-frame)",
@@ -43,9 +44,8 @@ export function PhoneFrame({
   const innerStyle: CSSProperties = showBezel
     ? {
         position: "relative",
-        height: "min(720px, calc(100dvh - 96px))",
-        aspectRatio: "9 / 19",
-        maxHeight: 812,
+        height: 600,
+        width: 260,
         borderRadius: 32,
         overflow: "hidden",
         background: `${gradient ?? ""}, linear-gradient(165deg, var(--surface-1), var(--surface-2))`,

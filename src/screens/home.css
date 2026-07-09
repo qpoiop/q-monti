@@ -1,5 +1,11 @@
+/*
+ * Home screen — pixel spec from design mockup (280x600 phone).
+ * All spacings match the design HTML so the mobile screen renders
+ * without unnecessary scroll.
+ */
+
 .home-body {
-  padding: clamp(18px, 5vw, 26px) clamp(16px, 4vw, 22px);
+  padding: 20px 18px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -8,29 +14,83 @@
   position: relative;
   z-index: 10;
 }
-.home-hero {
-  margin-top: 24px;
+
+/* -------------------------- Logo (fanned cards) -------------------------- */
+
+.home-logo {
+  margin-top: 22px;
+  position: relative;
+  width: 96px;
+  height: 80px;
+  flex: none;
+}
+.home-logo .card {
+  position: absolute;
+  width: 44px;
+  height: 62px;
+  border-radius: 9px;
+  box-shadow: 0 6px 12px -4px #000;
+}
+.home-logo .card-l {
+  left: 6px;
+  top: 14px;
+  background: #e7e2f5;
+  transform: rotate(-14deg);
+}
+.home-logo .card-r {
+  left: 44px;
+  top: 14px;
+  background: #e7e2f5;
+  transform: rotate(14deg);
+}
+.home-logo .card-c {
+  left: 26px;
+  top: 0;
+  background: linear-gradient(160deg, #fff, #e7e2f5);
+  box-shadow: 0 0 0 2px var(--accent-1), 0 10px 20px -6px var(--accent-glow);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
 }
+.home-logo .crown {
+  font-size: 13px;
+  margin-bottom: -2px;
+  line-height: 1;
+}
+.home-logo .rank {
+  color: var(--gold-4);
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1;
+}
+
+/* -------------------------- Brand text -------------------------- */
+
 .home-title {
   color: #fff;
   font-family: var(--font-brand);
   font-weight: 900;
   font-size: 30px;
   letter-spacing: -0.01em;
-  margin-top: 8px;
+  margin-top: 16px;
 }
 .home-subtitle {
   color: var(--accent-3);
   font-size: 12px;
+  margin-top: 4px;
 }
+
+/* -------------------------- CTAs -------------------------- */
+
 .home-ctas {
   margin-top: 28px;
   width: 100%;
 }
+
+/* -------------------------- Profile pill -------------------------- */
+
 .home-profile {
   margin-top: auto;
   padding: 10px 14px;
@@ -47,33 +107,8 @@
   font-size: 12px;
   font-weight: 600;
 }
-.home-logo {
-  position: relative;
-  width: 96px;
-  height: 80px;
-  background:
-    radial-gradient(circle at 50% 30%, rgba(242, 193, 78, 0.5), transparent 60%);
-}
-.home-logo::before,
-.home-logo::after,
-.home-logo > span {
-  /* Painted via mask/pseudo-elements + font emoji fallback would be involved. */
-}
-.home-logo::before {
-  content: "";
-  position: absolute;
-  left: 26px;
-  top: 0;
-  width: 44px;
-  height: 62px;
-  border-radius: 9px;
-  background: linear-gradient(160deg, #fff, #e7e2f5);
-  box-shadow: 0 0 0 2px var(--accent-1), 0 10px 20px -6px var(--accent-glow);
-}
-.home-logo::after {
-  content: "👑";
-  position: absolute;
-  left: 40px;
-  top: 4px;
-  font-size: 15px;
+.avatar-brand {
+  width: 26px;
+  height: 26px;
+  font-size: 11px;
 }
