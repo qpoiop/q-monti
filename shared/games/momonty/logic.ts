@@ -688,7 +688,8 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
           },
         });
         // Quad lock: same-value quad clears the pile.
-        if (analysis.form.kind === "quad" && state.config.quadLock) {
+        const quadCleared = analysis.form.kind === "quad" && state.config.quadLock;
+        if (quadCleared) {
           events.push({ type: "quadClear", actorSeatId: seatId });
           clearTrick(state);
           state.currentTrick.leaderSeatId = seatId;
@@ -700,7 +701,9 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
           events.push({ type: "out", actorSeatId: seatId });
           // Advance turn ownership away from finished seat.
           nextSeat(state);
-        } else {
+        } else if (!quadCleared) {
+          // Normal play — advance to next seat. When quad-lock triggers,
+          // clearTrick already set the acting seat back to the winner.
           nextSeat(state);
         }
       }
