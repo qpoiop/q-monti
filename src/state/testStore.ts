@@ -126,6 +126,10 @@ export function testDispatch(
     // move land, then run bot turns one at a time on a timer. Previous
     // implementation drained sync — the tester had no window to watch
     // each seat's card get played before control snapped back.
+    // Bot loop should return control to the seat that just dispatched
+    // (the tester's active seat), NOT to nextActing — otherwise we'd
+    // immediately hand control back to whichever bot is up next.
+    const humanSeatId = current.actingSeatId;
     current = {
       ...current,
       state: { ...state },
@@ -136,7 +140,7 @@ export function testDispatch(
     notify();
     void mirrorToGlobalStore();
     if (current.autoBots) {
-      scheduleBotStep(current.actingSeatId);
+      scheduleBotStep(humanSeatId);
     }
     return { ok: true };
   } catch (e) {
