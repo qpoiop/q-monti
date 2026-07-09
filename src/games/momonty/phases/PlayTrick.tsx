@@ -11,11 +11,16 @@ import "./play-trick.css";
  * Phase — PLAYING.
  *
  * Header (turn pill + timer ring) · Opp strip · Requirement pill ·
- * Pile · Selected preview · Hand · Action bar.
+ * Pile · Selected preview (reserved height) · Hand · Action bar.
  *
- * Timer is a client-side countdown reset whenever `currentSeatId`
- * changes (i.e. the turn passes). Ring uses a CSS custom property
- * so we don't repaint the SVG on every tick.
+ * Rules baked into the UI:
+ *   - Cards that cannot possibly contribute to a valid follow are
+ *     disabled at the DOM level — the click does nothing.
+ *   - Selected preview always occupies the same height so the layout
+ *     doesn't jump every time the user taps.
+ *   - Timer counts down; at 0 the seat auto-passes when following, or
+ *     the button label reads "시간 초과" when leading (server will
+ *     handle actual forfeit).
  */
 
 const TURN_LIMIT = 15;
@@ -79,13 +84,6 @@ function classify(cards: MCard[]): Classification | null {
   return null;
 }
 
-/**
- * Given the current form and a classified selection, describe what's
- * wrong (or null if it plays legally).
- *
- *   - form-mismatch → selection size or kind doesn't match the form
- *   - too-weak       → matches form but doesn't beat current value
- */
 function checkAgainstForm(
   form: TrickForm,
   cls: Classification,
@@ -102,12 +100,16 @@ function checkAgainstForm(
   return great ? (cls.value > target ? null : "too-weak") : cls.value < target ? null : "too-weak";
 }
 
-function isValidCardInForm(card: MCard, form: TrickForm): boolean {
+/**
+ * Whether a card can EVER contribute to a follow given the current
+ * form. Jesters always qualify, numbered cards must be strictly lower
+ * than the target value.
+ */
+function canFollowWithCard(card: MCard, form: TrickForm): boolean {
   if (form.kind === "none") return true;
   if (card.value === null) return true;
-  const targetValue =
-    "value" in form ? form.value : form.kind === "straight" ? form.startValue : 0;
-  return card.value < targetValue;
+  const target = "value" in form ? form.value : form.kind === "straight" ? form.startValue : 0;
+  return card.value < target;
 }
 
 export function PlayTrick({ view }: { view: MomontyView }) {
@@ -130,9 +132,11 @@ export function PlayTrick({ view }: { view: MomontyView }) {
     cls != null &&
     (isLeading || formError === null);
 
-  const toggle = (id: string) => {
+  const toggle = (card: MCard) => {
+    // Block interaction with cards that can't help follow the current form.
+    if (!isLeading && !canFollowWithCard(card, view.currentTrick.form)) return;
     setSelected((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      prev.includes(card.id) ? prev.filter((x) => x !== card.id) : [...prev, card.id]
     );
   };
 
@@ -152,6 +156,14 @@ export function PlayTrick({ view }: { view: MomontyView }) {
       : `${cls.value} ×${cls.size} ${isLeading ? "리드" : "내기"} 완료`;
     window.dispatchEvent(new CustomEvent("momonti:toast", { detail: label }));
     setSelected([]);
+  };
+
+  const doPass = () => {
+    setSelected([]);
+    send({ t: "action", action: { t: "pass" } });
+    window.dispatchEvent(
+      new CustomEvent("momonti:toast", { detail: "패스했어요 · 다음 사람 차례" })
+    );
   };
 
   const requirementText = (() => {
@@ -200,7 +212,12 @@ export function PlayTrick({ view }: { view: MomontyView }) {
 
   return (
     <div className="play-trick">
-      <PlayHeader isLeading={isLeading} myTurn={myTurn} seatKey={view.currentSeatId ?? ""} />
+      <PlayHeader
+        isLeading={isLeading}
+        myTurn={myTurn}
+        seatKey={view.currentSeatId ?? ""}
+        onTimeout={canPass && myTurn ? doPass : undefined}
+      />
 
       <OpponentStrip view={view} />
 
@@ -208,14 +225,17 @@ export function PlayTrick({ view }: { view: MomontyView }) {
 
       {isLeading ? <EmptyPile /> : <PileBox view={view} seatNames={seatNames} />}
 
-      {selectedCards.length > 0 && cls ? (
-        <SelectedPreview
-          cls={cls}
-          formError={formError}
-          hasWild={hasWild}
-          isLeading={isLeading}
-        />
-      ) : null}
+      {/* Reserved slot — always occupies space so the layout doesn't jump. */}
+      <div className="sel-slot">
+        {selectedCards.length > 0 && cls ? (
+          <SelectedPreview
+            cls={cls}
+            formError={formError}
+            hasWild={hasWild}
+            isLeading={isLeading}
+          />
+        ) : null}
+      </div>
 
       <div className="hand-label">
         내 손패 <b>{hand.length}장</b> · 같은 숫자끼리 묶임
@@ -241,13 +261,7 @@ export function PlayTrick({ view }: { view: MomontyView }) {
             type="button"
             className="pass-btn"
             disabled={!myTurn || !canPass}
-            onClick={() => {
-              setSelected([]);
-              send({ t: "action", action: { t: "pass" } });
-              window.dispatchEvent(
-                new CustomEvent("momonti:toast", { detail: "패스했어요 · 다음 사람 차례" })
-              );
-            }}
+            onClick={doPass}
           >
             패스
           </button>
@@ -266,7 +280,7 @@ export function PlayTrick({ view }: { view: MomontyView }) {
 }
 
 function describeForm(f: TrickForm): string {
-  if (f.kind === "single") return "1장";
+  if (f.kind === "single") return "1장 (싱글)";
   if (f.kind === "pair") return "2장 (페어)";
   if (f.kind === "triple") return "3장 (트리플)";
   if (f.kind === "quad") return "4장 (쿼드)";
@@ -280,23 +294,37 @@ function PlayHeader({
   isLeading,
   myTurn,
   seatKey,
+  onTimeout,
 }: {
   isLeading: boolean;
   myTurn: boolean;
   seatKey: string;
+  onTimeout?: () => void;
 }) {
   const [remaining, setRemaining] = useState(TURN_LIMIT);
   const seatRef = useRef(seatKey);
+  const firedRef = useRef(false);
   useEffect(() => {
     if (seatRef.current !== seatKey) {
       seatRef.current = seatKey;
+      firedRef.current = false;
       setRemaining(TURN_LIMIT);
     }
     const id = setInterval(() => {
-      setRemaining((r) => (r > 0 ? r - 1 : 0));
+      setRemaining((r) => {
+        if (r <= 1) {
+          if (!firedRef.current && onTimeout) {
+            firedRef.current = true;
+            // Defer so React sees zero first.
+            queueMicrotask(onTimeout);
+          }
+          return 0;
+        }
+        return r - 1;
+      });
     }, 1000);
     return () => clearInterval(id);
-  }, [seatKey]);
+  }, [seatKey, onTimeout]);
   const pct = remaining / TURN_LIMIT;
   const expired = remaining === 0;
   return (
@@ -341,10 +369,7 @@ function OpponentStrip({ view }: { view: MomontyView }) {
               {isLead ? <span className="opp-lead-chip">선</span> : null}
             </div>
             <div className="opp-count">
-              <span className="opp-back-icon" aria-hidden>
-                🂠
-              </span>
-              {view.handCounts[s] ?? 0}
+              🂠<span>{view.handCounts[s] ?? 0}</span>
             </div>
           </div>
         );
@@ -379,7 +404,7 @@ function PileBox({
   const activeSeats = view.seatOrder.filter(
     (s) => (view.handCounts[s] ?? 0) > 0
   ).length;
-  const remaining = Math.max(0, activeSeats - passCount - 1); // -1 = the topPlay seat
+  const remaining = Math.max(0, activeSeats - passCount - 1);
   return (
     <div className="pile pile-active">
       <div className="pile-head">
@@ -455,27 +480,24 @@ function HandStrip({
   hand: MCard[];
   selected: string[];
   form: TrickForm;
-  onToggle: (id: string) => void;
+  onToggle: (c: MCard) => void;
 }) {
   const sorted = useMemo(() => {
     return [...hand].sort((a, b) => {
       if (a.value == null && b.value == null) return 0;
       if (a.value == null) return 1;
       if (b.value == null) return -1;
-      return a.value - b.value;
+      return a.value! - b.value!;
     });
   }, [hand]);
   const nodes: React.ReactNode[] = [];
   for (let i = 0; i < sorted.length; i++) {
     const c = sorted[i];
     const isSel = selected.includes(c.id);
-    const valid = isValidCardInForm(c, form);
     const wild = c.value == null;
     const tone = wild ? "wild" : c.value! === 1 ? "royal" : "white";
-    const disabled = form.kind !== "none" && !valid && !wild;
+    const disabled = form.kind !== "none" && !canFollowWithCard(c, form);
     const prev = sorted[i - 1];
-    // Insert a small separator when the value changes (creates visual
-    // grouping without pretending cards overlap).
     if (prev && !sameValue(prev, c)) {
       nodes.push(<span key={`sep-${i}`} className="group-sep" aria-hidden />);
     }
@@ -487,7 +509,8 @@ function HandStrip({
         data-tone={tone}
         data-selected={isSel ? "true" : "false"}
         data-disabled={disabled ? "true" : "false"}
-        onClick={() => onToggle(c.id)}
+        disabled={disabled}
+        onClick={() => onToggle(c)}
       >
         {c.value === 1 ? <span className="mini-crown">👑</span> : null}
         {c.value ?? "★"}

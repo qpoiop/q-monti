@@ -52,7 +52,9 @@ export const defaultConfig: MomontyConfig = {
   revolutionEnabled: true,
   greatRevolutionEnabled: false,
   jesterPenalty: true,
-  autoPassOnUnplayable: false,
+  // Default ON — a player leading with 1 (unbeatable) should not require
+  // every seat to manually pass. Others fall through automatically.
+  autoPassOnUnplayable: true,
   quadLock: true,
   turnLimitSec: 20,
   targetRounds: 7,

@@ -79,19 +79,25 @@
   border-radius: 50%;
   background: var(--surface-1);
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
   gap: 1px;
   color: #fff;
   font-family: var(--font-brand);
   font-weight: 800;
+  padding-bottom: 1px;
 }
 .timer-value {
   font-size: 12px;
+  line-height: 1;
+  letter-spacing: -0.02em;
 }
 .timer-unit {
   font-size: 7px;
   opacity: 0.6;
+  line-height: 1;
+  align-self: flex-end;
+  padding-bottom: 1px;
 }
 .timer-ring.expired {
   background: conic-gradient(var(--neg-1) 360deg, transparent 0);
@@ -100,21 +106,27 @@
 
 /* -------------------------- Opponents -------------------------- */
 
+/* Matches mockup 3-1 spec exactly:
+ *   display:flex, gap:5
+ *   cell padding 6 0, radius 9, rgba white .05 border .08
+ *   name 9.5 #c9c2e0
+ *   count Outfit 700 11 #f2c14e — format "🂠9"
+ */
 .opp-strip {
   display: flex;
-  gap: 6px;
+  gap: 5px;
 }
 .opp-cell {
   flex: 1;
   min-width: 0;
   text-align: center;
-  padding: 8px 6px;
-  border-radius: 11px;
-  background: var(--glass-2);
-  border: 1px solid var(--glass-border-2);
+  padding: 6px 0;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 .opp-cell[data-turn="true"] {
   border-color: var(--accent-border);
@@ -139,28 +151,25 @@
   margin-left: 4px;
 }
 .opp-name {
-  font-size: 11px;
-  color: var(--text-4);
+  font-size: 9.5px;
+  color: #c9c2e0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  justify-content: center;
 }
 .opp-count {
   color: var(--accent-1);
   font-family: var(--font-brand);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 11px;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 1px;
   justify-content: center;
-}
-.opp-back-icon {
-  font-size: 12px;
-  opacity: 0.8;
 }
 
 /* -------------------------- Requirement pill -------------------------- */
@@ -308,6 +317,17 @@
   border: 1px solid var(--accent-border);
   color: var(--accent-3);
 }
+
+/* Reserved slot — always occupies the sel-pill height so tapping a
+ * card doesn't shift the whole layout. */
+.sel-slot {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
+.sel-slot:empty {
+  min-height: 40px;
+}
 .sel-bad {
   background: rgba(248, 113, 113, 0.14);
   border: 1px solid rgba(248, 113, 113, 0.35);
@@ -413,6 +433,8 @@
   color: #4b4670;
   opacity: 0.4;
   box-shadow: none;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 .mini-crown {
   position: absolute;
