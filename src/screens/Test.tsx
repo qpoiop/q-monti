@@ -9,7 +9,7 @@ import {
   useTest,
   viewForSeat,
 } from "@web/state/testStore";
-import { navigate } from "@web/nav/router";
+import { installBackGuard, navigate } from "@web/nav/router";
 import { currentPhase } from "@shared/games/momonty/phases";
 import { PHASE_VIEWS } from "@web/games/momonty/phases";
 import { FooterBar, HeaderActions, ScreenBody, StatusBadge, RulesButton } from "@web/design/layout";
@@ -147,7 +147,17 @@ function TestPlay() {
       if (e.key === "Escape") setConfirmLeave(false);
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    // Intercept browser back — surface the same exit confirm the user
+    // sees when tapping the on-screen back arrow so the test session
+    // doesn't silently vanish.
+    const cleanup = installBackGuard(() => {
+      setConfirmLeave(true);
+      return true;
+    });
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      cleanup();
+    };
   }, []);
 
   if (!rawState) return null;

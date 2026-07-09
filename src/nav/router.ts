@@ -68,6 +68,21 @@ export function closeExitConfirm(): void {
 }
 
 /**
+ * Popstate guard — a route can install this to intercept the browser
+ * back button and show its own confirm instead of the route change.
+ * The installed guard receives a callback it should call to actually
+ * proceed with the navigation (typically after the user confirms).
+ */
+type BackGuard = (proceed: () => void) => boolean;
+let backGuard: BackGuard | null = null;
+export function installBackGuard(g: BackGuard | null): () => void {
+  backGuard = g;
+  return () => {
+    if (backGuard === g) backGuard = null;
+  };
+}
+
+/**
  * Exit the app.
  *
  * Priority:
@@ -162,6 +177,22 @@ export function initRouter(): void {
     const raw = (ev.state && ev.state[STATE_KEY]) as Route | undefined;
     const target = raw ?? pathToRoute(window.location.pathname || "/");
     const effective = guard(target);
+    // Route-installed guard takes precedence so an in-progress screen
+    // can intercept the back gesture (test mode, live match, etc.).
+    if (backGuard) {
+      const path = routeToPath(getState().route);
+      const proceed = () => {
+        installBackGuard(null);
+        history.back();
+      };
+      const consumed = backGuard(proceed);
+      if (consumed) {
+        // Put the current route back on top of the stack so hitting back
+        // again while the confirm is still open re-triggers this handler.
+        history.pushState({ [STATE_KEY]: getState().route }, "", path);
+        return;
+      }
+    }
     if (effective.name === "home" && target.name === "home" && exitConfirmOpen === false) {
       emitConfirm(true);
       history.pushState({ [STATE_KEY]: { name: "home" } }, "", "/");

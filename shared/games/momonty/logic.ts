@@ -594,9 +594,23 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
       return { state, events };
     }
 
-    // RANK_REVEAL → PLAYING transition triggered by user confirmation.
+    // RANK_REVEAL → TAXATION (if enabled) or PLAYING (if skipped).
     if (state.phase === "RANK_REVEAL" && action.t === "confirmRanks") {
-      state.phase = "PLAYING";
+      if (state.config.taxationEnabled) {
+        state.phase = "TAXATION";
+        state.taxation.pendingUploads = {};
+        state.taxation.pendingReturns = {};
+        for (const [seatId, rank] of Object.entries(state.ranks)) {
+          const t = taxAmount(rank as Rank);
+          if (t.upload > 0) state.taxation.pendingUploads[seatId] = t.upload;
+          if (t.ret > 0) state.taxation.pendingReturns[seatId] = t.ret;
+        }
+        if (Object.keys(state.taxation.pendingUploads).length === 0) {
+          state.phase = "PLAYING";
+        }
+      } else {
+        state.phase = "PLAYING";
+      }
       state.currentTrick.leaderSeatId =
         Object.entries(state.ranks).find(([, r]) => r === "GRAND_MOMONTY")?.[0] ??
         state.seatOrder[0];
