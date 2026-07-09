@@ -111,21 +111,40 @@ export function confirmExit(): void {
 }
 
 function showFarewell(): void {
+  // Reopen path uses window.location.replace('/') so the farewell entry
+  // doesn't stack in history. The initial reopen using `<a href="/">`
+  // sometimes reused the mutilated document (missing viewport meta,
+  // rehydrated over the farewell markup), which is what broke the
+  // viewport. Full reload with a viewport meta pinned to the head
+  // keeps mobile scaling honest.
   document.documentElement.innerHTML = `
-    <head><meta charset="utf-8"><title>모몬티</title>
-    <style>
-      html,body{margin:0;height:100%;background:#120e26;color:#f4f2ff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;text-align:center}
-      .box{padding:24px}
-      .k{font-family:'Outfit',sans-serif;font-weight:900;font-size:34px;background:linear-gradient(135deg,#f2c14e,#c855f0);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:.02em}
-      .s{color:#b8b0d8;margin-top:10px;font-size:14px}
-      a{color:#f8d98a;margin-top:20px;display:inline-block;text-decoration:none;padding:10px 18px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);font-size:13px}
-    </style>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+      <title>모몬티</title>
+      <style>
+        html,body{margin:0;height:100%;background:#120e26;color:#f4f2ff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;text-align:center}
+        .box{padding:24px;display:flex;flex-direction:column;align-items:center;gap:14px}
+        .k{font-family:'Outfit',sans-serif;font-weight:900;font-size:34px;background:linear-gradient(135deg,#f2c14e,#c855f0);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:.02em}
+        .s{color:#b8b0d8;font-size:14px;margin-top:-6px}
+        .row{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;justify-content:center}
+        button{color:inherit;text-decoration:none;padding:11px 18px;border-radius:999px;font-size:13px;font-weight:700;font-family:sans-serif;border:1px solid rgba(255,255,255,.16);cursor:pointer;background:rgba(255,255,255,.08)}
+        button.primary{color:#f8d98a;background:linear-gradient(135deg,rgba(242,193,78,.28),rgba(200,85,240,.18));border-color:rgba(242,193,78,.4)}
+        button.hint{color:#8a83a4;background:transparent;border-color:rgba(255,255,255,.08)}
+        p.tip{color:#6f6a88;font-size:11.5px;margin:0;max-width:220px;line-height:1.5}
+      </style>
     </head>
-    <body><div class="box">
-      <div class="k">모몬티</div>
-      <div class="s">즐거운 왕좌였어요 👑</div>
-      <a href="/">다시 열기</a>
-    </div></body>`;
+    <body>
+      <div class="box">
+        <div class="k">모몬티</div>
+        <div class="s">즐거운 왕좌였어요 👑</div>
+        <div class="row">
+          <button class="primary" onclick="location.replace('/')">다시 열기</button>
+          <button class="hint" onclick="(function(){try{window.close();}catch(_){}setTimeout(function(){document.querySelector('p.tip').style.opacity='1';},200);})()">종료</button>
+        </div>
+        <p class="tip" style="opacity:0">브라우저에서 열린 앱은 자동으로 닫을 수 없어요. 탭을 직접 닫아 주세요.</p>
+      </div>
+    </body>`;
 }
 
 function guard(r: Route): Route {
