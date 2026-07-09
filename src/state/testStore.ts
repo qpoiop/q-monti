@@ -231,12 +231,14 @@ function seatToDrive(state: MomontyState, humanSeatId: string): string | null {
     }
     return null;
   }
-  if (state.phase === "RANK_REVEAL" || state.phase === "ROUND_END") return humanSeatId;
+  if (state.phase === "RANK_REVEAL") return humanSeatId;
+  if (state.phase === "ROUND_END") return humanSeatId;
   return null;
 }
 
 function botAction(state: MomontyState, seatId: string): MomontyAction | null {
   if (state.phase === "DRAWING_RANK") return { t: "drawRank" };
+  if (state.phase === "RANK_REVEAL") return { t: "confirmRanks" };
   if (state.phase === "TAXATION") {
     const hand = state.hands[seatId] ?? [];
     const owe = state.taxation.pendingUploads[seatId] ?? 0;
@@ -275,8 +277,15 @@ function botAction(state: MomontyState, seatId: string): MomontyAction | null {
 
 function leadWeakest(hand: Card[]): MomontyAction | null {
   const numbered = hand.filter((c) => c.value != null) as (Card & { value: number })[];
-  if (numbered.length === 0) return { t: "pass" };
-  // Weakest = highest value (1 is the strongest).
+  if (numbered.length === 0) {
+    // Jesters-only hand — dump one as a single with the weakest value.
+    const jester = hand.find((c) => c.value == null);
+    if (!jester) return null;
+    return { t: "playCards", cardIds: [jester.id], wildAsValue: 12 };
+  }
+  // Weakest = highest value (1 is the strongest). Sets are single/pair/
+  // triple/quad — cap at 4 copies since the engine only supports up to
+  // quads for same-value plays.
   const byVal = new Map<number, Card[]>();
   for (const c of numbered) {
     const arr = byVal.get(c.value) ?? [];
@@ -285,8 +294,13 @@ function leadWeakest(hand: Card[]): MomontyAction | null {
   }
   let best: { v: number; cards: Card[] } | null = null;
   for (const [v, cards] of byVal.entries()) {
-    if (!best || v > best.v || (v === best.v && cards.length > best.cards.length)) {
-      best = { v, cards };
+    const capped = cards.slice(0, 4);
+    if (
+      !best ||
+      v > best.v ||
+      (v === best.v && capped.length > best.cards.length)
+    ) {
+      best = { v, cards: capped };
     }
   }
   if (!best) return { t: "pass" };
@@ -344,13 +358,20 @@ export function runBotForHuman(): void {
   let state = current.state;
   const events: unknown[] = [];
   const startRound = state.round;
+  let consecutivePasses = 0;
   for (let step = 0; step < 400; step++) {
     if (state.phase === "MATCH_END") break;
-    if (state.phase === "ROUND_END" && state.round !== startRound) break;
+    if (state.round !== startRound) break;
+    // Detect stalls — if every seat has already passed the maximum
+    // number of times in a row that's possible, the pile must be stuck.
+    // Bail so a single click can't spin for 400 steps.
+    if (consecutivePasses >= state.seatOrder.length * 4) break;
     const activeSeat = seatToDrive(state, current.actingSeatId);
     if (!activeSeat) break;
     const bot = botAction(state, activeSeat);
     if (!bot) break;
+    if (bot.t === "pass") consecutivePasses++;
+    else consecutivePasses = 0;
     const rng = makeRng(`test:hand-off:${current.version}:${step}:${activeSeat}`);
     try {
       const result = momontyGame.reduce({

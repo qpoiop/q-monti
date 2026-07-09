@@ -750,6 +750,30 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
         state.currentTrick.passSeatIds.push(seatId);
         events.push({ type: "pass", actorSeatId: seatId });
         nextSeat(state);
+        // Stall guard: if the trick's leader is out (empty hand) and every
+        // seat still in the round has passed, `nextSeat` won't ever hit
+        // the leader-return branch. Force-clear the trick so play moves
+        // to the surviving leader.
+        {
+          const leader = state.currentTrick.topPlay?.seatId ?? state.currentTrick.leaderSeatId;
+          const leaderOut = (state.hands[leader] ?? []).length === 0;
+          const eligible = state.seatOrder.filter(
+            (s) =>
+              (state.hands[s] ?? []).length > 0 &&
+              !state.currentTrick.passSeatIds.includes(s)
+          );
+          if (leaderOut && eligible.length === 0 && state.currentTrick.form.kind !== "none") {
+            clearTrick(state);
+            events.push({ type: "trickClear", actorSeatId: leader });
+          }
+        }
+        // Also revisit round-end since the pile just may have shrunk the
+        // active pool below 2 remaining seats.
+        const alive = state.seatOrder.filter((s) => (state.hands[s] ?? []).length > 0);
+        if (alive.length <= 1) {
+          for (const s of alive) if (!state.outOrder.includes(s)) state.outOrder.push(s);
+          endRound(state, rng, events);
+        }
       } else if (action.t === "playCards") {
         const hand = state.hands[seatId];
         const picked: Card[] = [];
