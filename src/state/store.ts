@@ -55,6 +55,10 @@ export function getState(): AppState {
 export function patchState(patch: Partial<AppState>): void {
   setState(patch);
 }
+
+if (typeof window !== "undefined") {
+  (window as any).__momontiPatchState = patchState;
+}
 export function subscribe(l: () => void): () => void {
   listeners.add(l);
   return () => listeners.delete(l);

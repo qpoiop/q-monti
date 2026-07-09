@@ -18,6 +18,10 @@ export function openSettings(): void {
   openHandler?.();
 }
 
+if (typeof window !== "undefined") {
+  (window as any).__momontiOpenSettings = () => openHandler?.();
+}
+
 export function SettingsSheet() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"basic" | "advanced">("basic");
