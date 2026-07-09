@@ -12,6 +12,7 @@ import { Toast } from "./screens/Toast";
 import { InstallLayer } from "./screens/InstallLayer";
 import { ExitConfirm } from "./screens/ExitConfirm";
 import { RulesSheet } from "./screens/RulesSheet";
+import { SettingsSheet } from "./screens/SettingsSheet";
 import { EventFx } from "./design/effects/EventFx";
 import { RevolutionOverlay } from "./games/momonty/phases/RevolutionOverlay";
 import { TaxResultOverlay } from "./games/momonty/phases/TaxResultOverlay";
@@ -59,6 +60,7 @@ export function App() {
       <ConnectionOverlay />
       <ExitConfirm />
       <RulesSheet />
+      <SettingsSheet />
       <Toast />
     </div>
   );

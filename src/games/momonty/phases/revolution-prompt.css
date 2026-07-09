@@ -1,0 +1,181 @@
+/*
+ * Revolution declaration prompt — mockup § 2-3 spec.
+ * Full-frame purple gradient with jester cards + effect list + two
+ * bottom-anchored CTAs.
+ */
+
+.revolt-prompt-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 340;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background:
+    radial-gradient(80% 50% at 50% 42%, rgba(200, 85, 240, 0.28), transparent 62%),
+    linear-gradient(165deg, #1a0d2c, #2a1140);
+  backdrop-filter: blur(8px);
+  animation: revolt-prompt-in 0.32s var(--easing);
+}
+.revolt-prompt-scrim.closing {
+  animation: revolt-prompt-out 0.22s var(--easing) forwards;
+}
+@keyframes revolt-prompt-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes revolt-prompt-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.revolt-prompt-body {
+  width: 100%;
+  max-width: 400px;
+  padding: 40px 22px calc(24px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+.revolt-prompt-emoji {
+  font-size: 34px;
+  filter: drop-shadow(0 0 20px rgba(200, 85, 240, 0.6));
+}
+.revolt-prompt-title {
+  color: #fff;
+  font-family: var(--font-brand);
+  font-weight: 900;
+  font-size: 28px;
+  letter-spacing: 0.02em;
+  margin-top: 8px;
+}
+.revolt-prompt-sub {
+  color: #e0b6ff;
+  font-size: 13px;
+  text-align: center;
+  margin-top: 8px;
+  line-height: 1.55;
+}
+.revolt-prompt-sub b {
+  color: #fff;
+}
+.revolt-prompt-sub .highlight {
+  color: #f2c14e;
+}
+
+.revolt-prompt-jesters {
+  margin-top: 24px;
+  display: flex;
+  gap: 14px;
+}
+.revolt-prompt-card {
+  width: 74px;
+  height: 100px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, #2a2350, #1a1636);
+  border: 1.5px solid #c855f0;
+  box-shadow: 0 0 22px rgba(200, 85, 240, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.revolt-prompt-card.left {
+  transform: rotate(-7deg);
+}
+.revolt-prompt-card.right {
+  transform: rotate(7deg);
+}
+.revolt-prompt-card .star {
+  color: #e0b6ff;
+  font-size: 26px;
+  font-family: var(--font-brand);
+  font-weight: 800;
+}
+.revolt-prompt-card .label {
+  color: #e0b6ff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.revolt-prompt-effect {
+  margin-top: 24px;
+  width: 100%;
+  padding: 13px 15px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.revolt-prompt-effect-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #e9e4ff;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.revolt-prompt-effect-head .tag {
+  color: #c8bce0;
+  font-size: 10px;
+}
+.revolt-prompt-effect-row {
+  display: flex;
+  gap: 7px;
+  color: #c9c2e0;
+  font-size: 11.5px;
+}
+.revolt-prompt-effect-row b {
+  color: #fff;
+}
+.revolt-prompt-effect-row b.gold {
+  color: #f8d98a;
+}
+.revolt-prompt-effect-row .check {
+  color: #6ee7b7;
+}
+.revolt-prompt-effect-row.muted {
+  color: #9a92c0;
+}
+.revolt-prompt-effect-row.muted span:first-child {
+  color: #f2c14e;
+}
+
+.revolt-prompt-actions {
+  margin-top: auto;
+  padding-top: 28px;
+  width: 100%;
+  display: flex;
+  gap: 8px;
+}
+.revolt-prompt-hold {
+  flex: 1;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #d6ccff;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.revolt-prompt-declare {
+  flex: 1.6;
+  padding: 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #c855f0, #7c6cf0);
+  color: #fff;
+  border: none;
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 14px 26px -10px rgba(200, 85, 240, 0.7);
+  animation: m-turn 1.6s infinite;
+}

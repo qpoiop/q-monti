@@ -163,7 +163,7 @@ const MOMONTY: Rulebook = {
             {
               icon: "🚩",
               label: "리드",
-              detail: "빈 파일에 원하는 조합을 선언",
+              detail: "빈 덱에 원하는 조합을 선언",
               branch: "리더는 패스 불가",
             },
             {
@@ -182,7 +182,7 @@ const MOMONTY: Rulebook = {
         {
           type: "text",
           body:
-            "리더까지 한 바퀴 돌아 모두 패스하면 파일이 정리되고, 마지막으로 낸 사람이 다음 트릭의 리더가 됩니다.",
+            "리더까지 한 바퀴 돌아 모두 패스하면 덱이 정리되고, 마지막으로 낸 사람이 다음 트릭의 리더가 됩니다.",
         },
       ],
     },
@@ -321,7 +321,7 @@ const MOMONTY: Rulebook = {
         {
           type: "tags",
           items: [
-            { label: "Quad Lock", hint: "같은 숫자 4장 즉시 파일 정리" },
+            { label: "Quad Lock", hint: "같은 숫자 4장 즉시 덱 정리" },
             { label: "광대 잔류 페널티", hint: "라운드 끝까지 광대 보유 시 −2점" },
             { label: "자동 패스", hint: "낼 수 없으면 자동으로 패스" },
             { label: "대혁명", hint: "혁명 시 서열 완전 역전" },

@@ -41,78 +41,104 @@ export function TaxResultOverlay() {
         : "나"
       : seatNames?.[seatId] ?? seatId.slice(-4);
 
-  const uploads = open.filter((t) => t.direction === "upload");
-  const returns = open.filter((t) => t.direction === "return");
+  // Group each upload with its return counterpart so the reader sees
+  // one row per momonty↔peon pair — matches mockup § 2-4 which reads
+  // "지훈 ↔ 지아 · 받음 1,2 · 돌려줌 12,12" as a single card.
+  const pairs = groupTransfers(open);
 
   return (
     <div className="tax-result-scrim" role="dialog" aria-live="polite">
       <div className="tax-result-card">
-        <div className="tax-result-eyebrow">과세 완료</div>
-        <div className="tax-result-title">세금 이동 요약</div>
+        <div className="tax-result-eyebrow">✓ 과세 완료 · 라운드 시작</div>
+        <div className="tax-result-title">세금이 정산됐습니다</div>
         <div className="tax-result-body">
-          {uploads.length > 0 ? (
-            <div className="tax-result-section">
-              <div className="tax-result-section-label">평민 → 모몬티 상납</div>
-              <div className="tax-transfer-list">
-                {uploads.map((t, i) => (
-                  <TransferRow key={`u-${i}`} t={t} nameOf={nameOf} />
-                ))}
-              </div>
-            </div>
-          ) : null}
-          {returns.length > 0 ? (
-            <div className="tax-result-section">
-              <div className="tax-result-section-label">모몬티 → 평민 하사</div>
-              <div className="tax-transfer-list">
-                {returns.map((t, i) => (
-                  <TransferRow key={`r-${i}`} t={t} nameOf={nameOf} />
-                ))}
-              </div>
-            </div>
-          ) : null}
+          {pairs.map((p, i) => (
+            <PairRow key={i} pair={p} nameOf={nameOf} />
+          ))}
         </div>
         <button
           type="button"
           className="tax-result-cta"
           onClick={() => setOpen(null)}
         >
-          플레이 시작 ▶
+          라운드 시작 ▶
         </button>
       </div>
     </div>
   );
 }
 
-function TransferRow({
-  t,
+interface Pair {
+  momontySeatId: string;
+  peonSeatId: string;
+  received: TaxTransfer["cards"]; // peon → momonty
+  returned: TaxTransfer["cards"]; // momonty → peon
+  tier: "grand" | "lesser";
+}
+
+function groupTransfers(transfers: TaxTransfer[]): Pair[] {
+  const byKey = new Map<string, Pair>();
+  const keyFor = (mo: string, pe: string) => `${mo}::${pe}`;
+  for (const t of transfers) {
+    const mo = t.direction === "upload" ? t.toSeatId : t.fromSeatId;
+    const pe = t.direction === "upload" ? t.fromSeatId : t.toSeatId;
+    const k = keyFor(mo, pe);
+    const cur =
+      byKey.get(k) ??
+      ({
+        momontySeatId: mo,
+        peonSeatId: pe,
+        received: [],
+        returned: [],
+        // Rough tier hint by card count — grand pair moves 2 cards.
+        tier: "lesser",
+      } as Pair);
+    if (t.direction === "upload") cur.received = [...cur.received, ...t.cards];
+    else cur.returned = [...cur.returned, ...t.cards];
+    if (cur.received.length >= 2 || cur.returned.length >= 2) cur.tier = "grand";
+    byKey.set(k, cur);
+  }
+  return [...byKey.values()];
+}
+
+function PairRow({
+  pair,
   nameOf,
 }: {
-  t: TaxTransfer;
+  pair: Pair;
   nameOf: (id: string) => string;
-  ranks?: Record<string, string>;
 }) {
-  // Ranks were previously shown next to each name but this is unreliable
-  // during round transitions — the transfer is recorded with the ranks
-  // at settlement time while the view carries whatever ranks were rolled
-  // into the next round's beginRound(). Names + cards are enough here;
-  // the section header already tells the reader which direction the
-  // transfer travels.
+  const isGrand = pair.tier === "grand";
   return (
-    <div className="tax-transfer-row">
-      <span className="tax-side">
-        <span className="tax-name">{nameOf(t.fromSeatId)}</span>
-      </span>
-      <span className="tax-arrow">→</span>
-      <span className="tax-side">
-        <span className="tax-name">{nameOf(t.toSeatId)}</span>
-      </span>
-      <span className="tax-cards">
-        {t.cards.map((c, i) => (
-          <span key={i} className={`tax-mini-card${c.value === null ? " wild" : ""}`}>
-            {c.value === null ? "★" : c.value}
-          </span>
-        ))}
-      </span>
+    <div className={`tax-pair-row ${isGrand ? "grand" : "lesser"}`}>
+      <div className="tax-pair-head">
+        <span className="tax-pair-title">
+          {isGrand ? "👑" : "♛"} {nameOf(pair.momontySeatId)}
+          <span className="tax-pair-swap">↔</span>
+          {isGrand ? "⛏" : "🧰"} {nameOf(pair.peonSeatId)}
+        </span>
+        <span className="tax-pair-note">
+          {isGrand ? "2·2 교환" : "1·1 교환"}
+        </span>
+      </div>
+      <div className="tax-pair-body">
+        <span className="tax-pair-inbound">
+          받음{" "}
+          {pair.received.map((c, i) => (
+            <span key={i} className={`tax-mini-card${c.value === null ? " wild" : ""}`}>
+              {c.value === null ? "★" : c.value}
+            </span>
+          ))}
+        </span>
+        <span className="tax-pair-outbound">
+          돌려줌{" "}
+          {pair.returned.map((c, i) => (
+            <span key={i} className={`tax-mini-card${c.value === null ? " wild" : ""}`}>
+              {c.value === null ? "★" : c.value}
+            </span>
+          ))}
+        </span>
+      </div>
     </div>
   );
 }

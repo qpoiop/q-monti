@@ -87,6 +87,78 @@
 .tax-transfer-row .tax-cards {
   flex-shrink: 0;
 }
+
+/* -------------------------- Paired rows (mockup §2-4) -------------------------- */
+
+.tax-pair-row {
+  padding: 11px 13px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tax-pair-row.grand {
+  background: rgba(242, 193, 78, 0.1);
+  border: 1px solid rgba(242, 193, 78, 0.3);
+}
+.tax-pair-row.lesser {
+  background: rgba(214, 179, 255, 0.1);
+  border: 1px solid rgba(214, 179, 255, 0.28);
+}
+.tax-pair-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tax-pair-title {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tax-pair-row.grand .tax-pair-title {
+  color: #f8d98a;
+}
+.tax-pair-row.lesser .tax-pair-title {
+  color: #d6b3ff;
+}
+.tax-pair-swap {
+  margin: 0 6px;
+  color: rgba(255, 255, 255, 0.5);
+}
+.tax-pair-note {
+  color: #9a92c0;
+  font-size: 10px;
+  font-weight: 700;
+  flex: none;
+}
+.tax-pair-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: #c9c2e0;
+  flex-wrap: wrap;
+}
+.tax-pair-inbound {
+  color: #a5f3c4;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.tax-pair-outbound {
+  color: #fda4af;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.tax-pair-inbound .tax-mini-card,
+.tax-pair-outbound .tax-mini-card {
+  margin-left: 2px;
+}
 .tax-side {
   min-width: 0;
   display: flex;

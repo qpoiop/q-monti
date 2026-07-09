@@ -7,7 +7,7 @@ import "./history-sheet.css";
  * Dimi (더미) history bottom sheet — mockup §4-2.
  *
  * Reads plays from `view.historyTail`. Three filter chips:
- *   - 이번 파일: entries since last trick clear
+ *   - 이번 덱: entries since last trick clear
  *   - 라운드 전체: entries this round
  *   - 카운팅: aggregate remaining strong cards
  *
@@ -115,7 +115,7 @@ export function HistorySheet() {
           </button>
         </div>
         <div className="history-sub">
-          라운드 {view.round} · {tab === "trick" ? "이번 파일" : tab === "round" ? "라운드 전체" : "남은 카드 카운팅"}
+          라운드 {view.round} · {tab === "trick" ? "이번 덱" : tab === "round" ? "라운드 전체" : "남은 카드 카운팅"}
         </div>
         <div className="history-tabs">
           <button
@@ -123,7 +123,7 @@ export function HistorySheet() {
             className={`history-tab ${tab === "trick" ? "active" : ""}`}
             onClick={() => setTab("trick")}
           >
-            이번 파일
+            이번 덱
           </button>
           <button
             type="button"

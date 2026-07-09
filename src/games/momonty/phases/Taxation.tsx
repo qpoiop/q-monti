@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { send } from "@web/state/store";
 import type { Card as MCard, MomontyView, Rank } from "@shared/games/momonty/logic";
+import { RevolutionPrompt } from "./RevolutionPrompt";
 import "./taxation.css";
 
 /**
@@ -33,6 +34,14 @@ export function Taxation({ view }: { view: MomontyView }) {
     view.config.revolutionEnabled &&
     !view.taxation.revolutionUsed &&
     jesterCount >= 2;
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [promptDismissed, setPromptDismissed] = useState(false);
+  useEffect(() => {
+    // Auto-open the prompt once per taxation phase — dismissing it drops
+    // back to the standard taxation view where the smaller 혁명 선언
+    // button still lives, so the player can change their mind.
+    if (canRevolt && !promptDismissed) setPromptOpen(true);
+  }, [canRevolt, promptDismissed]);
 
   // Auto-pick lowest N (strongest) for peon uploads. Momonty selection
   // is user-driven and validated against `ret` size.
@@ -229,6 +238,21 @@ export function Taxation({ view }: { view: MomontyView }) {
             })}
           </span>
         </div>
+      ) : null}
+
+      {promptOpen ? (
+        <RevolutionPrompt
+          greatEnabled={view.config.greatRevolutionEnabled}
+          onDismiss={() => {
+            setPromptOpen(false);
+            setPromptDismissed(true);
+          }}
+          onDeclare={() => {
+            setPromptOpen(false);
+            setPromptDismissed(true);
+            declareRevolt();
+          }}
+        />
       ) : null}
 
       <div className="tax-actions">

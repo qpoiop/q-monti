@@ -1,0 +1,114 @@
+/*
+ * Room settings sheet — bottom modal.
+ * Matches mockup §1-3: back-header + eyebrow, 기본/고급 tabs, glass
+ * rows for each rule.
+ */
+
+.settings-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 4, 15, 0.72);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 320;
+  animation: settings-fade var(--dur-med) var(--easing);
+}
+@keyframes settings-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.settings-sheet {
+  width: 100%;
+  max-width: 460px;
+  height: min(85dvh, 720px);
+  background: var(--surface-2);
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
+  box-shadow: 0 -20px 44px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: settings-slide var(--dur-med) var(--easing);
+}
+@keyframes settings-slide {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.settings-grabber {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  margin: 10px auto 6px;
+  flex: none;
+}
+
+.settings-head {
+  padding: 4px 22px 10px;
+  border-bottom: 1px solid var(--glass-border-1);
+  flex: none;
+}
+.settings-head-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+}
+.settings-head-eyebrow {
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 15px;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+.settings-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--glass-3);
+  border: 1px solid var(--glass-border-2);
+  color: var(--text-2);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.settings-tabs {
+  display: flex;
+  gap: 6px;
+}
+.settings-tab {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #9a92c0;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+.settings-tab.active {
+  background: rgba(242, 193, 78, 0.2);
+  border-color: rgba(242, 193, 78, 0.4);
+  color: #f8d98a;
+  font-weight: 800;
+}
+
+.settings-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 22px calc(24px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.settings-body.readonly {
+  pointer-events: none;
+  opacity: 0.85;
+}

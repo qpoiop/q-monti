@@ -185,7 +185,7 @@ export function PlayTrick({ view }: { view: MomontyView }) {
   const [passBanner, setPassBanner] = useState(false);
   const hand = view.myHand ?? [];
   // React to the shared event log so we can flash a brief "N명 자동 패스"
-  // and "파일 정리" overlay whenever the server tick tells us something
+  // and "덱 정리" overlay whenever the server tick tells us something
   // interesting happened. Live rooms will produce the same events; test
   // mode wires them through the local reducer.
   const events = useStore((s) => s.gameView?.lastEvents ?? EMPTY_EVENTS_ARR);
@@ -381,7 +381,7 @@ export function PlayTrick({ view }: { view: MomontyView }) {
             ? `${flash.count ?? 0}명 자동 패스 · 낼 카드 없음`
             : flash.kind === "quad"
             ? "🎯 쿼드 클리어 · 계속 리드"
-            : "파일 정리 · 새 리드 시작"}
+            : "덱 정리 · 새 리드 시작"}
         </div>
       ) : null}
 
@@ -647,7 +647,7 @@ function PassBanner() {
       <div className="pass-banner-emoji">🙅</div>
       <div className="pass-banner-title">패스했습니다</div>
       <div className="pass-banner-sub">
-        낼 카드가 없거나 전략적 보류 — 이번 파일에 다시 참여할 수 없어요
+        낼 카드가 없거나 전략적 보류 — 이번 덱에 다시 참여할 수 없어요
       </div>
     </div>
   );

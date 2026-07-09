@@ -122,38 +122,70 @@ export function testDispatch(
           ) ?? current.actingSeatId
         : current.actingSeatId;
 
-    // Shallow copy state so React notices the change.
-    let mergedState = state;
-    let mergedEvents: unknown[] = events;
-    let actingAfter = nextActing;
-    if (current.autoBots) {
-      // Human = whoever just dispatched. Drain autonomous turns for
-      // every other seat until the flow needs the human's input again.
-      const drained = drainBotTurns(
-        mergedState,
-        current.actingSeatId,
-        current.version + 1
-      );
-      mergedState = drained.state;
-      mergedEvents = [...mergedEvents, ...drained.events];
-      actingAfter = drained.actingSeatId;
-    }
+    // Commit the human's action first so the tester sees their own
+    // move land, then run bot turns one at a time on a timer. Previous
+    // implementation drained sync — the tester had no window to watch
+    // each seat's card get played before control snapped back.
     current = {
       ...current,
-      state: { ...mergedState },
-      events: mergedEvents,
+      state: { ...state },
+      events,
       version: current.version + 1,
-      actingSeatId: actingAfter,
+      actingSeatId: nextActing,
     };
     notify();
-    // Mirror to the global store so shared overlays that read
-    // `gameView.lastEvents` (revolution / tax result / history) still
-    // fire during test-mode runs.
     void mirrorToGlobalStore();
+    if (current.autoBots) {
+      scheduleBotStep(current.actingSeatId);
+    }
     return { ok: true };
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
+}
+
+/** Delay between bot steps so the human can see each turn advance. */
+const BOT_STEP_MS = 700;
+let botTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleBotStep(humanSeatId: string, immediate = false): void {
+  if (botTimer) clearTimeout(botTimer);
+  const run = () => {
+    botTimer = null;
+    if (!current || !current.autoBots) return;
+    const activeSeat = seatToDrive(current.state, humanSeatId);
+    if (!activeSeat) return;
+    if (activeSeat === humanSeatId) {
+      // Human's turn again — stop stepping and hand control back.
+      return;
+    }
+    const bot = botAction(current.state, activeSeat);
+    if (!bot) return;
+    const rng = makeRng(`test:bot:${current.version}:${activeSeat}`);
+    try {
+      const result = momontyGame.reduce({
+        state: current.state,
+        seatId: activeSeat,
+        action: bot,
+        rng,
+      });
+      current = {
+        ...current,
+        state: { ...result.state },
+        events: result.events,
+        version: current.version + 1,
+        actingSeatId: seatToDrive(result.state, humanSeatId) ?? humanSeatId,
+      };
+      notify();
+      void mirrorToGlobalStore();
+    } catch {
+      // Illegal move — hand control back to human rather than looping.
+      return;
+    }
+    scheduleBotStep(humanSeatId);
+  };
+  if (immediate) run();
+  else botTimer = setTimeout(run, BOT_STEP_MS);
 }
 
 /**
@@ -162,59 +194,6 @@ export function testDispatch(
  * policy — the goal is to keep the round moving so the tester can see
  * end-to-end transitions, not to play well. Straights are skipped.
  */
-function drainBotTurns(
-  startState: MomontyState,
-  humanSeatId: string,
-  baseVersion: number
-): { state: MomontyState; events: unknown[]; actingSeatId: string } {
-  let state = startState;
-  const events: unknown[] = [];
-  let acting = humanSeatId;
-  // Guard against unexpected infinite loops.
-  for (let step = 0; step < 200; step++) {
-    if (state.phase === "MATCH_END") break;
-    const activeSeat = seatToDrive(state, humanSeatId);
-    if (!activeSeat || activeSeat === humanSeatId) {
-      // Return control to the human seat once the flow needs their input.
-      acting = seatToDrive(state, humanSeatId) ?? humanSeatId;
-      break;
-    }
-    const bot = botAction(state, activeSeat);
-    if (!bot) {
-      acting = activeSeat;
-      break;
-    }
-    const rng = makeRng(`test:bot:${baseVersion}:${step}:${activeSeat}`);
-    try {
-      const result = momontyGame.reduce({
-        state,
-        seatId: activeSeat,
-        action: bot,
-        rng,
-      });
-      state = result.state;
-      for (const e of result.events) events.push(e);
-    } catch (e) {
-      // Bot picked an illegal move — fall back to pass, and if that also
-      // fails, hand control back to the human.
-      try {
-        const rng2 = makeRng(`test:botpass:${baseVersion}:${step}:${activeSeat}`);
-        const result = momontyGame.reduce({
-          state,
-          seatId: activeSeat,
-          action: { t: "pass" },
-          rng: rng2,
-        });
-        state = result.state;
-        for (const e of result.events) events.push(e);
-      } catch {
-        acting = activeSeat;
-        break;
-      }
-    }
-  }
-  return { state, events, actingSeatId: acting };
-}
 
 function seatToDrive(state: MomontyState, humanSeatId: string): string | null {
   if (state.phase === "PLAYING") return state.seatOrder[state.currentSeatIdx] ?? null;

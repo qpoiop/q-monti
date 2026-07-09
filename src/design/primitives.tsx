@@ -33,6 +33,10 @@ export function Button({
     fontSize: "var(--btn-fz)",
     textAlign: "center",
     width: full ? "100%" : undefined,
+    // Button labels should never wrap — Korean text like "방 나가기"
+    // was breaking mid-word in narrow flex rows and looked broken.
+    whiteSpace: "nowrap",
+    minWidth: 0,
     transition: "transform var(--dur-fast) var(--easing), opacity var(--dur-fast)",
     ["--btn-py" as any]:
       size === "sm"

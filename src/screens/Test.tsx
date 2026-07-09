@@ -250,7 +250,7 @@ function TestSetup() {
               />
               <SettingRow
                 label="같은 숫자 락 (Quad Lock)"
-                hint="쿼드 즉시 파일 정리 · 리더 유지"
+                hint="쿼드 즉시 덱 정리 · 리더 유지"
                 right={
                   <Toggle
                     value={config.quadLock}
@@ -260,7 +260,7 @@ function TestSetup() {
               />
               <SettingRow
                 label="낼 수 없으면 자동 패스"
-                hint="1같은 강카드 리드 시 즉시 다음 파일"
+                hint="1같은 강카드 리드 시 즉시 다음 덱"
                 right={
                   <Toggle
                     value={config.autoPassOnUnplayable}
