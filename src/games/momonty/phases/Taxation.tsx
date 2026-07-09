@@ -80,6 +80,12 @@ export function Taxation({ view }: { view: MomontyView }) {
       }
     : null;
 
+  // Momonty side may have already received uploads from peons — show a
+  // pill telling them what landed in their hand before they pick returns.
+  const receivedCards: MCard[] = ret > 0
+    ? Object.values(view.taxation.uploadedCards ?? {}).flat()
+    : [];
+
   if (upload === 0 && ret === 0) {
     // No obligation — either a merchant or nothing to do.
     return (
@@ -113,6 +119,17 @@ export function Taxation({ view }: { view: MomontyView }) {
           </div>
         </div>
       </div>
+
+      {receivedCards.length > 0 ? (
+        <div className="tax-received">
+          <span className="tax-received-label">
+            받은 상납: {receivedCards
+              .map((c) => (c.value == null ? "★" : c.value))
+              .join(", ")}{" "}
+            — 손패에 추가됨 ✓
+          </span>
+        </div>
+      ) : null}
 
       {recipient ? (
         <div
