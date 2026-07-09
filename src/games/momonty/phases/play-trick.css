@@ -532,14 +532,18 @@
   color: #e0b6ff;
 }
 .hand-card[data-selected="true"] {
-  background: linear-gradient(160deg, #fff7e6, #fdecc4);
-  box-shadow: 0 0 0 2px var(--accent-1), 0 5px 10px -3px var(--accent-glow);
+  background: linear-gradient(160deg, #fff, #ffe6a0);
+  outline: 2px solid var(--accent-1);
+  outline-offset: 1px;
+  box-shadow: 0 6px 14px -4px var(--accent-glow);
   transform: translateY(-6px);
   z-index: 2;
 }
 .hand-card[data-tone="wild"][data-selected="true"] {
-  background: linear-gradient(160deg, #3a2f60, #241d44);
-  box-shadow: 0 0 0 2px var(--brand-purple-2), 0 5px 10px -3px rgba(200, 85, 240, 0.5);
+  background: linear-gradient(160deg, #4a3b8a, #251f52);
+  outline: 2px solid var(--brand-purple-2);
+  outline-offset: 1px;
+  box-shadow: 0 6px 14px -4px rgba(200, 85, 240, 0.55);
 }
 .hand-card[data-disabled="true"] {
   background: #8f8aa8;
