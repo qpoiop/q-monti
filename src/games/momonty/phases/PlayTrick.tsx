@@ -392,12 +392,12 @@ export function PlayTrick({ view }: { view: MomontyView }) {
           <button
             type="button"
             className="side-btn"
-            title={`정렬: ${sortMode === "asc" ? "낮은 순" : sortMode === "desc" ? "높은 순" : "묶음 순"}`}
+            title="손패 정렬 · 낮은 순 → 높은 순 → 묶음 순"
             onClick={() =>
               setSortMode((m) => (m === "asc" ? "desc" : m === "desc" ? "group" : "asc"))
             }
           >
-            정렬 {sortMode === "asc" ? "↑" : sortMode === "desc" ? "↓" : "≡"}
+            {sortMode === "asc" ? "↑ 낮은 순" : sortMode === "desc" ? "↓ 높은 순" : "≡ 묶음"}
           </button>
         ) : (
           <button
