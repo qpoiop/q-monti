@@ -500,6 +500,8 @@ function OpponentStrip({ view }: { view: MomontyView }) {
         const passed = view.currentTrick.passSeatIds.includes(s);
         const isTurn = view.currentSeatId === s;
         const isLead = s === leaderId;
+        const count = view.handCounts[s] ?? 0;
+        const isOut = count === 0;
         return (
           <div
             key={s}
@@ -507,13 +509,18 @@ function OpponentStrip({ view }: { view: MomontyView }) {
             data-turn={isTurn ? "true" : "false"}
             data-passed={passed ? "true" : "false"}
             data-lead={isLead ? "true" : "false"}
+            data-out={isOut ? "true" : "false"}
           >
             <div className="opp-name">
               {names[s] ?? s.slice(-2)}
               {isLead ? <span className="opp-lead-chip">선</span> : null}
             </div>
             <div className="opp-count">
-              🂠<span>{view.handCounts[s] ?? 0}</span>
+              {isOut ? (
+                <span className="opp-out-tag">완주</span>
+              ) : (
+                <>🂠<span>{count}</span></>
+              )}
             </div>
           </div>
         );
