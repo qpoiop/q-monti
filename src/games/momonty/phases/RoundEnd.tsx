@@ -1,16 +1,19 @@
+import { send } from "@web/state/store";
 import type { MomontyView, Rank } from "@shared/games/momonty/logic";
 import { RANK_LABEL_KO } from "@shared/games/momonty/logic";
 import "./round-end.css";
 
 /**
- * Phase — ROUND_END / RANK_REVEAL.
+ * Phase — RANK_REVEAL / ROUND_END.
  *
- * Design mockup § 5-2 (라운드 결과):
- *   골드 subtitle "라운드 N 종료 · 새 서열"
- *   Big label "다음 라운드 자리 이동"
- *   Vertical rank list — each row shows avatar/icon, name, movement
- *     indicator (▲/▼/－) and rank tier label
- *   Optional callout (jester penalty etc.)
+ * RANK_REVEAL (immediately after all seats drew or a round finished)
+ *   Shows the resolved ranks and pauses for a user tap on "과세 단계로 ▶"
+ *   before continuing. Prevents the game from silently teleporting into
+ *   play the instant the last person picks.
+ *
+ * ROUND_END mirrors 시안 § 5-2 with a rank list and a "라운드 N+1 ·
+ *   과세로 자동 이동" CTA — server drives the actual transition; this
+ *   surface is just for reading and confirmation.
  */
 const RANK_ORDER: Rank[] = ["GRAND_MOMONTY", "MOMONTY", "MERCHANT", "PEON", "GRAND_PEON"];
 
@@ -30,6 +33,7 @@ const RANK_ICON: Record<Rank, string> = {
 };
 
 export function RoundEnd({ view }: { view: MomontyView }) {
+  const isReveal = view.phase === "RANK_REVEAL";
   const rows = Object.entries(view.ranks)
     .map(([seatId, rank]) => ({
       seatId,
@@ -48,8 +52,14 @@ export function RoundEnd({ view }: { view: MomontyView }) {
   return (
     <div className="round-end">
       <div className="round-end-heading">
-        <div className="round-end-eyebrow">라운드 {view.round} 종료 · 새 서열</div>
-        <div className="round-end-title">다음 라운드 자리 이동</div>
+        <div className="round-end-eyebrow">
+          {isReveal
+            ? `라운드 ${view.round} · 서열 확정`
+            : `라운드 ${view.round} 종료 · 새 서열`}
+        </div>
+        <div className="round-end-title">
+          {isReveal ? "이번 라운드 자리 배치" : "다음 라운드 자리 이동"}
+        </div>
       </div>
 
       <div className="rank-list">
@@ -59,6 +69,7 @@ export function RoundEnd({ view }: { view: MomontyView }) {
             <span className="rank-name">
               {name}
               {seatId === view.mySeatId ? <span className="rank-me-tag">나</span> : null}
+              {rank === "GRAND_MOMONTY" ? <span className="lead-tag">선</span> : null}
             </span>
             <span className="rank-pos">{i + 1}위</span>
             <span className="rank-role">{RANK_LABEL_KO[rank]}</span>
@@ -66,21 +77,29 @@ export function RoundEnd({ view }: { view: MomontyView }) {
         ))}
       </div>
 
-      {jesterPenaltyOn ? (
+      {!isReveal && jesterPenaltyOn ? (
         <div className="round-end-callout">
           💡 광대 잔류 페널티 적용 · 라운드 종료 시 광대 보유자 −2점
         </div>
       ) : null}
 
-      <div className="round-end-cta">
-        {view.phase === "MATCH_END" ? (
-          <span className="round-end-cta-label">🏆 매치 종료 · 결과 화면으로 이동</span>
-        ) : (
+      {isReveal ? (
+        <button
+          type="button"
+          className="round-end-primary-cta"
+          onClick={() => send({ t: "action", action: { t: "confirmRanks" } })}
+        >
+          {view.config.taxationEnabled ? "과세 단계로 ▶" : "게임 시작 ▶"}
+        </button>
+      ) : (
+        <div className="round-end-cta">
           <span className="round-end-cta-label">
-            라운드 {view.round + 1} · 과세로 자동 이동 ▶
+            {view.phase === "MATCH_END"
+              ? "🏆 매치 종료 · 결과 화면으로 이동"
+              : `라운드 ${view.round + 1} · 과세로 자동 이동 ▶`}
           </span>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

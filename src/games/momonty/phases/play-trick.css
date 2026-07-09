@@ -254,6 +254,11 @@
   border: 1px solid rgba(52, 211, 153, 0.35);
   color: var(--pos-1);
 }
+.sel-lead {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--accent-3);
+}
 .sel-bad {
   background: rgba(248, 113, 113, 0.14);
   border: 1px solid rgba(248, 113, 113, 0.35);

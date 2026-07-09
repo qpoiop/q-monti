@@ -157,6 +157,7 @@ export interface MomontyState {
 
 export type MomontyAction =
   | { t: "drawRank" }
+  | { t: "confirmRanks" }
   | { t: "uploadCards"; cardIds: string[] }
   | { t: "returnCards"; cardIds: string[] }
   | { t: "declareRevolution" }
@@ -570,25 +571,28 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
       const pick = 1 + rng.nextInt(state.config.cardMax);
       state.drawRank!.picks[seatId] = pick;
       events.push({ type: "drawRank", actorSeatId: seatId, payload: { value: pick } });
-      // If all seats drew — resolve ranks by ascending pick (ties broken by seat order).
+      // If everyone has drawn, resolve ranks and PAUSE at RANK_REVEAL so the
+      // UI can confirm before dealing / entering play.
       const picks = state.drawRank!.picks;
       if (Object.keys(picks).length === state.seatOrder.length) {
         const ordered = [...state.seatOrder].sort((a, b) => {
           if (picks[a] !== picks[b]) return picks[a] - picks[b];
           return state.seatOrder.indexOf(a) - state.seatOrder.indexOf(b);
         });
-        // Fake outOrder from the pick — assign ranks as if they'd been out in this order.
         state.ranks = assignRanks(ordered, state.seatOrder, false);
         state.phase = "RANK_REVEAL";
         events.push({ type: "rankRevealed", payload: { ranks: state.ranks } });
-        // First round skips taxation (no prior ranks matter in the rule as written,
-        // but many house rules keep tax from R1 too — we skip for clarity).
-        state.phase = "PLAYING";
-        state.currentTrick.leaderSeatId =
-          Object.entries(state.ranks).find(([, r]) => r === "GRAND_MOMONTY")?.[0] ??
-          state.seatOrder[0];
-        state.currentSeatIdx = state.seatOrder.indexOf(state.currentTrick.leaderSeatId);
       }
+      return { state, events };
+    }
+
+    // RANK_REVEAL → PLAYING transition triggered by user confirmation.
+    if (state.phase === "RANK_REVEAL" && action.t === "confirmRanks") {
+      state.phase = "PLAYING";
+      state.currentTrick.leaderSeatId =
+        Object.entries(state.ranks).find(([, r]) => r === "GRAND_MOMONTY")?.[0] ??
+        state.seatOrder[0];
+      state.currentSeatIdx = state.seatOrder.indexOf(state.currentTrick.leaderSeatId);
       return { state, events };
     }
 

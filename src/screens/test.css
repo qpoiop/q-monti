@@ -42,6 +42,23 @@
 .test-seat-name {
   font-size: 12.5px;
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.test-seat-btn[data-lead="true"] {
+  border-color: var(--accent-border);
+  background: linear-gradient(160deg, var(--accent-soft), rgba(255, 255, 255, 0.02));
+  color: #fff;
+}
+.lead-badge {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: var(--accent-text-on);
+  font-size: 9px;
+  font-family: var(--font-brand);
+  font-weight: 800;
 }
 .test-seat-hand {
   font-family: var(--font-brand);

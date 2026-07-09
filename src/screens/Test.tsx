@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PhoneFrame } from "@web/design/PhoneFrame";
-import { Button, ScreenHeader, SettingRow, Segmented, Stepper, Toggle } from "@web/design/primitives";
+import { Button, ScreenHeader, SettingRow, Stepper, Toggle } from "@web/design/primitives";
 import { DesktopStage } from "./DesktopStage";
 import {
   initTest,
@@ -18,10 +18,13 @@ import { momontyGame } from "@shared/games/momonty/logic";
 import "./test.css";
 
 /**
- * Test mode surface — two stages:
- *   1. Setup: config form (seat count, taxation/revolution/quadLock etc.)
- *      → user hits 테스트 시작 → local match boots.
- *   2. Play: standard phase view with seat picker + menu (leave → home).
+ * Test mode — two stages:
+ *   1. Setup: config form → 테스트 시작.
+ *   2. Play: standard phase views + seat picker.
+ *
+ * Back arrow opens a simple exit confirm. No hamburger menu — rules
+ * already have a dedicated chip, and "다시 하기" belongs in the setup
+ * step (user returns to setup by exiting).
  */
 export function TestScreen() {
   const started = useTest((s) => s.state != null);
@@ -61,12 +64,7 @@ function TestSetup() {
           <SettingRow
             label="대혁명"
             hint="서열 완전 역전"
-            right={
-              <Toggle
-                value={config.greatRevolutionEnabled}
-                onChange={(v) => set({ greatRevolutionEnabled: v })}
-              />
-            }
+            right={<Toggle value={config.greatRevolutionEnabled} onChange={(v) => set({ greatRevolutionEnabled: v })} />}
           />
           <SettingRow
             label="광대 잔류 페널티"
@@ -79,16 +77,17 @@ function TestSetup() {
             right={<Toggle value={config.quadLock} onChange={(v) => set({ quadLock: v })} />}
           />
           <SettingRow
+            label="낼 수 없으면 자동 패스"
+            hint="이길 카드 없는 좌석은 자동 패스"
+            right={<Toggle value={config.autoPassOnUnplayable} onChange={(v) => set({ autoPassOnUnplayable: v })} />}
+          />
+          <SettingRow
             label="목표 라운드"
             right={<Stepper value={config.targetRounds} min={1} max={12} onChange={(v) => set({ targetRounds: v })} />}
           />
         </ScreenBody>
         <FooterBar>
-          <Button
-            full
-            variant="primary"
-            onClick={() => initTest({ seatCount: seats, config })}
-          >
+          <Button full variant="primary" onClick={() => initTest({ seatCount: seats, config })}>
             🧪 테스트 시작 ▶
           </Button>
         </FooterBar>
@@ -104,12 +103,11 @@ function TestPlay() {
   const seatNames = useTest((s) => s.seatNames);
   const version = useTest((s) => s.version);
   const rawState = useTest((s) => s.state);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
+      if (e.key === "Escape") setConfirmLeave(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -121,11 +119,7 @@ function TestPlay() {
   const spec = currentPhase(view);
   const guardReason = spec.guard(view, acting);
   const PhaseView = PHASE_VIEWS[spec.viewKey];
-
-  const leave = () => {
-    resetTest();
-    navigate({ name: "home" });
-  };
+  const leaderSeatId = rawState.currentTrick?.leaderSeatId;
 
   return (
     <DesktopStage>
@@ -139,14 +133,6 @@ function TestPlay() {
               <StatusBadge tone={guardReason == null ? "active" : "idle"} pulse={guardReason == null}>
                 {guardReason == null ? "행동 가능" : guardReason}
               </StatusBadge>
-              <button
-                type="button"
-                className="menu-btn"
-                onClick={() => setMenuOpen(true)}
-                aria-label="menu"
-              >
-                ⋮
-              </button>
             </HeaderActions>
           }
         />
@@ -159,9 +145,13 @@ function TestPlay() {
               data-active={seatId === acting ? "true" : "false"}
               data-turn={seatId === view.currentSeatId ? "true" : "false"}
               data-out={(view.handCounts[seatId] ?? 0) === 0 ? "true" : "false"}
+              data-lead={seatId === leaderSeatId ? "true" : "false"}
               onClick={() => setActingSeat(seatId)}
             >
-              <span className="test-seat-name">{seatNames[seatId] ?? seatId}</span>
+              <span className="test-seat-name">
+                {seatNames[seatId] ?? seatId}
+                {seatId === leaderSeatId ? <span className="lead-badge">선</span> : null}
+              </span>
               <span className="test-seat-hand">{view.handCounts[seatId] ?? 0}장</span>
             </button>
           ))}
@@ -170,54 +160,24 @@ function TestPlay() {
           <PhaseView view={view} key={`${version}-${acting}-${spec.id}`} />
         </ScreenBody>
       </PhoneFrame>
-      {menuOpen ? (
-        <div className="menu-scrim" onClick={() => setMenuOpen(false)}>
-          <div className="menu-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="menu-title">테스트 메뉴</div>
-            <button
-              type="button"
-              className="menu-item"
-              onClick={() => {
-                setMenuOpen(false);
-                openRules("momonty");
-              }}
-            >
-              📖 규칙 다시 보기
-            </button>
-            <button
-              type="button"
-              className="menu-item"
-              onClick={() => {
-                setMenuOpen(false);
-                resetTest();
-              }}
-            >
-              🔄 처음부터 다시
-            </button>
-            <button
-              type="button"
-              className="menu-item danger"
-              onClick={() => {
-                setMenuOpen(false);
-                setConfirmLeave(true);
-              }}
-            >
-              🚪 방 나가기
-            </button>
-          </div>
-        </div>
-      ) : null}
       {confirmLeave ? (
         <div className="menu-scrim" onClick={() => setConfirmLeave(false)}>
           <div className="menu-sheet center" onClick={(e) => e.stopPropagation()}>
-            <div className="menu-title">테스트를 종료할까요?</div>
-            <div className="menu-sub">현재 진행 상황은 저장되지 않아요</div>
+            <div className="menu-title">테스트에서 나갈까요?</div>
+            <div className="menu-sub">방 설정 화면으로 돌아갑니다</div>
             <div className="menu-row">
               <Button full variant="ghost" onClick={() => setConfirmLeave(false)}>
                 계속 진행
               </Button>
-              <Button full variant="primary" onClick={leave}>
-                종료
+              <Button
+                full
+                variant="primary"
+                onClick={() => {
+                  setConfirmLeave(false);
+                  resetTest();
+                }}
+              >
+                나가기
               </Button>
             </div>
           </div>

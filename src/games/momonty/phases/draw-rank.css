@@ -45,6 +45,22 @@
 }
 .draw-rank-centre {
   transform: translateY(-6px);
+  transition: transform var(--dur-med) var(--easing);
+}
+.draw-rank-centre.rolling {
+  animation: rank-roll 0.28s ease-out infinite;
+}
+.draw-rank-centre.settled {
+  animation: rank-land 0.42s var(--easing);
+}
+@keyframes rank-roll {
+  0%, 100% { transform: translateY(-6px) rotate(-2deg); }
+  50% { transform: translateY(-8px) rotate(2deg); }
+}
+@keyframes rank-land {
+  0% { transform: translateY(-20px) scale(1.15); filter: drop-shadow(0 0 12px var(--accent-glow)); }
+  60% { transform: translateY(-2px) scale(1.02); }
+  100% { transform: translateY(-6px) scale(1); }
 }
 
 .draw-rank-result {
@@ -76,6 +92,9 @@
   border: 1px solid var(--glass-border-1);
   border-radius: 16px;
   padding: 12px 14px;
+  max-height: 240px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .draw-rank-progress-head {
   display: flex;
@@ -106,8 +125,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 4px;
+  padding: 8px 8px;
   border-bottom: 1px dashed var(--glass-border-1);
+  border-radius: 8px;
+  transition: background var(--dur-fast);
+}
+.draw-rank-row[data-focus="true"] {
+  background: var(--accent-soft);
+  border-bottom-color: transparent;
+  box-shadow: 0 0 0 1px var(--accent-border);
+  animation: focus-pop 0.5s var(--easing);
+}
+@keyframes focus-pop {
+  from { transform: scale(0.98); }
+  to { transform: scale(1); }
 }
 .draw-rank-row:last-child {
   border-bottom: none;

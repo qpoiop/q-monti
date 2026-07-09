@@ -197,7 +197,12 @@ export function PlayTrick({ view }: { view: MomontyView }) {
       {isLeading ? <EmptyPile /> : <PileBox view={view} seatNames={seatNames} />}
 
       {selectedCards.length > 0 && cls ? (
-        <SelectedPreview cls={cls} canBeat={isLeading || canBeat} hasWild={hasWild} />
+        <SelectedPreview
+          cls={cls}
+          canBeat={isLeading || canBeat}
+          hasWild={hasWild}
+          isLeading={isLeading}
+        />
       ) : null}
 
       <div className="hand-header">
@@ -344,18 +349,22 @@ function SelectedPreview({
   cls,
   canBeat,
   hasWild,
+  isLeading,
 }: {
   cls: Classification;
   canBeat: boolean;
   hasWild: boolean;
+  isLeading: boolean;
 }) {
-  const tone = !canBeat ? "bad" : hasWild ? "wild" : "good";
+  const tone = !canBeat ? "bad" : hasWild ? "wild" : isLeading ? "lead" : "good";
   const label = !canBeat
     ? "· 더 낮음"
     : cls.kind === "none"
     ? ""
     : hasWild
     ? "· ★ 와일드"
+    : isLeading
+    ? "· 리드 준비"
     : "· 더 강함 ✓";
   return (
     <div className={`sel-pill sel-${tone}`}>

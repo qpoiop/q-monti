@@ -146,3 +146,31 @@
   font-weight: 800;
   font-size: 14px;
 }
+
+.round-end-primary-cta {
+  margin-top: auto;
+  padding: 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--brand-purple-1), var(--brand-purple-2));
+  color: #fff;
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 15px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 14px 26px -10px var(--brand-purple-glow);
+  animation: m-fade-in 0.5s var(--easing) both;
+}
+.round-end-primary-cta:active {
+  transform: scale(0.98);
+}
+
+.lead-tag {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: var(--accent-text-on);
+  font-size: 9px;
+  font-family: var(--font-brand);
+  font-weight: 800;
+}
