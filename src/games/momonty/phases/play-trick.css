@@ -480,6 +480,53 @@
   }
 }
 
+/* Pass banner — full-frame overlay when I press 패스. Matches §3-4. */
+.pass-banner {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 32px;
+  background: linear-gradient(180deg, rgba(6, 4, 15, 0.72), rgba(6, 4, 15, 0.88));
+  backdrop-filter: blur(6px);
+  animation: pass-banner-in 0.34s var(--easing);
+  pointer-events: none;
+}
+.pass-banner-emoji {
+  font-size: 60px;
+}
+.pass-banner-title {
+  color: #fecdd3;
+  font-family: var(--font-brand);
+  font-weight: 900;
+  font-size: 26px;
+  letter-spacing: -0.01em;
+}
+.pass-banner-sub {
+  color: var(--text-2);
+  font-size: 12.5px;
+  text-align: center;
+  line-height: 1.6;
+  max-width: 260px;
+}
+@keyframes pass-banner-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .action-bar {
   margin-top: auto;
   display: flex;

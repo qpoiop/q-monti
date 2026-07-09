@@ -25,6 +25,7 @@ import "./play-trick.css";
 
 const TURN_LIMIT = 15;
 const EMPTY_EVENTS_ARR: unknown[] = [];
+type SortMode = "asc" | "desc" | "group";
 
 type ClsError = "form-mismatch" | "too-weak" | null;
 
@@ -115,6 +116,8 @@ function canFollowWithCard(card: MCard, form: TrickForm): boolean {
 
 export function PlayTrick({ view }: { view: MomontyView }) {
   const [selected, setSelected] = useState<string[]>([]);
+  const [sortMode, setSortMode] = useState<SortMode>("asc");
+  const [passBanner, setPassBanner] = useState(false);
   const hand = view.myHand ?? [];
   // React to the shared event log so we can flash a brief "N명 자동 패스"
   // and "파일 정리" overlay whenever the server tick tells us something
@@ -192,10 +195,9 @@ export function PlayTrick({ view }: { view: MomontyView }) {
 
   const doPass = () => {
     setSelected([]);
+    setPassBanner(true);
+    setTimeout(() => setPassBanner(false), 1400);
     send({ t: "action", action: { t: "pass" } });
-    window.dispatchEvent(
-      new CustomEvent("momonti:toast", { detail: "패스했어요 · 다음 사람 차례" })
-    );
   };
 
   const requirementText = (() => {
@@ -277,6 +279,7 @@ export function PlayTrick({ view }: { view: MomontyView }) {
         selected={selected}
         form={view.currentTrick.form}
         onToggle={toggle}
+        sortMode={sortMode}
       />
 
       {flash ? (
@@ -289,14 +292,19 @@ export function PlayTrick({ view }: { view: MomontyView }) {
         </div>
       ) : null}
 
+      {passBanner ? <PassBanner /> : null}
+
       <div className="action-bar">
         {isLeading ? (
           <button
             type="button"
             className="side-btn"
-            onClick={() => setSelected([])}
+            title={`정렬: ${sortMode === "asc" ? "낮은 순" : sortMode === "desc" ? "높은 순" : "묶음 순"}`}
+            onClick={() =>
+              setSortMode((m) => (m === "asc" ? "desc" : m === "desc" ? "group" : "asc"))
+            }
           >
-            정렬
+            정렬 {sortMode === "asc" ? "↑" : sortMode === "desc" ? "↓" : "≡"}
           </button>
         ) : (
           <button
@@ -513,25 +521,51 @@ function SelectedPreview({
   );
 }
 
+function PassBanner() {
+  return (
+    <div className="pass-banner" aria-live="assertive">
+      <div className="pass-banner-emoji">🙅</div>
+      <div className="pass-banner-title">패스했습니다</div>
+      <div className="pass-banner-sub">
+        낼 카드가 없거나 전략적 보류 — 이번 파일에 다시 참여할 수 없어요
+      </div>
+    </div>
+  );
+}
+
 function HandStrip({
   hand,
   selected,
   form,
   onToggle,
+  sortMode,
 }: {
   hand: MCard[];
   selected: string[];
   form: TrickForm;
   onToggle: (c: MCard) => void;
+  sortMode: SortMode;
 }) {
   const sorted = useMemo(() => {
-    return [...hand].sort((a, b) => {
-      if (a.value == null && b.value == null) return 0;
-      if (a.value == null) return 1;
-      if (b.value == null) return -1;
-      return a.value! - b.value!;
-    });
-  }, [hand]);
+    const arr = [...hand];
+    if (sortMode === "asc" || sortMode === "group") {
+      arr.sort((a, b) => {
+        if (a.value == null && b.value == null) return 0;
+        if (a.value == null) return 1;
+        if (b.value == null) return -1;
+        return a.value! - b.value!;
+      });
+    } else {
+      // desc
+      arr.sort((a, b) => {
+        if (a.value == null && b.value == null) return 0;
+        if (a.value == null) return 1;
+        if (b.value == null) return -1;
+        return b.value! - a.value!;
+      });
+    }
+    return arr;
+  }, [hand, sortMode]);
   const nodes: React.ReactNode[] = [];
   for (let i = 0; i < sorted.length; i++) {
     const c = sorted[i];
