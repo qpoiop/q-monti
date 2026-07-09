@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { send } from "@web/state/store";
 import type {
   Card as MCard,
@@ -10,28 +10,29 @@ import "./play-trick.css";
 /**
  * Phase — PLAYING.
  *
- * Layout matches 시안 § 3 exactly:
- *   Header  — gold pulsing "내 리드 차례" / "내 차례" pill  · timer ring
- *   Opp strip — 3-4 opponent cells with name + 🂠N
- *   Pile — empty state (dashed) OR active box with top cards + actor
- *   Requirement pill — "현재 세트 3장 · 10보다 낮은 3장만 가능"
- *   Selection preview — "선택: 10 ×3" + mini cards on right
- *   Hand — grouped same-value cards with tone-per-value + gold selection glow
- *   Action bar — 정렬 (lead) / 패스 (follow) + gradient CTA
+ * Header (turn pill + timer ring) · Opp strip · Requirement pill ·
+ * Pile · Selected preview · Hand · Action bar.
+ *
+ * Timer is a client-side countdown reset whenever `currentSeatId`
+ * changes (i.e. the turn passes). Ring uses a CSS custom property
+ * so we don't repaint the SVG on every tick.
  */
 
+const TURN_LIMIT = 15;
+
+type ClsError = "form-mismatch" | "too-weak" | null;
+
 interface Classification {
-  kind: "none" | "single" | "pair" | "triple" | "quad" | "straight";
+  kind: "single" | "pair" | "triple" | "quad" | "straight";
   value: number;
   size: number;
   jesters: number;
-  wildBase?: number;
+  wildBase: number;
   cards: MCard[];
 }
 
 function classify(cards: MCard[]): Classification | null {
-  if (cards.length === 0)
-    return { kind: "none", value: 0, size: 0, jesters: 0, cards: [] };
+  if (cards.length === 0) return null;
   const jesters = cards.filter((c) => c.value === null);
   const numbered = cards.filter((c) => c.value != null) as (MCard & { value: number })[];
   if (numbered.length === 0) return null;
@@ -78,20 +79,27 @@ function classify(cards: MCard[]): Classification | null {
   return null;
 }
 
-function beats(current: TrickForm, cand: Classification, great: boolean): boolean {
-  if (current.kind === "none") return true;
-  if (cand.kind === "none") return false;
-  if (current.kind !== cand.kind) return false;
-  if (current.kind === "straight" && cand.kind === "straight") {
-    if (current.length !== cand.size) return false;
+/**
+ * Given the current form and a classified selection, describe what's
+ * wrong (or null if it plays legally).
+ *
+ *   - form-mismatch → selection size or kind doesn't match the form
+ *   - too-weak       → matches form but doesn't beat current value
+ */
+function checkAgainstForm(
+  form: TrickForm,
+  cls: Classification,
+  great: boolean
+): ClsError {
+  if (form.kind === "none") return null;
+  if (form.kind === "straight" && cls.kind === "straight") {
+    if (form.length !== cls.size) return "form-mismatch";
+    const target = form.startValue;
+    return great ? (cls.value > target ? null : "too-weak") : cls.value < target ? null : "too-weak";
   }
-  const cur =
-    "value" in current
-      ? current.value
-      : current.kind === "straight"
-      ? current.startValue
-      : 0;
-  return great ? cand.value > cur : cand.value < cur;
+  if (form.kind !== cls.kind) return "form-mismatch";
+  const target = "value" in form ? form.value : 0;
+  return great ? (cls.value > target ? null : "too-weak") : cls.value < target ? null : "too-weak";
 }
 
 function isValidCardInForm(card: MCard, form: TrickForm): boolean {
@@ -104,7 +112,6 @@ function isValidCardInForm(card: MCard, form: TrickForm): boolean {
 
 export function PlayTrick({ view }: { view: MomontyView }) {
   const [selected, setSelected] = useState<string[]>([]);
-  const [sortMode, setSortMode] = useState<"value" | "group">("group");
   const hand = view.myHand ?? [];
   const myTurn = view.currentSeatId === view.mySeatId;
   const isLeading = view.currentTrick.form.kind === "none";
@@ -115,9 +122,13 @@ export function PlayTrick({ view }: { view: MomontyView }) {
     .map((id) => hand.find((c) => c.id === id))
     .filter(Boolean) as MCard[];
   const cls = classify(selectedCards);
-  const canBeat = cls ? beats(view.currentTrick.form, cls, view.taxation.greatRevolution) : false;
+  const formError = cls ? checkAgainstForm(view.currentTrick.form, cls, view.taxation.greatRevolution) : null;
   const hasWild = selectedCards.some((c) => c.value === null);
-  const submitOk = myTurn && selectedCards.length > 0 && cls != null && (isLeading || canBeat);
+  const submitOk =
+    myTurn &&
+    selectedCards.length > 0 &&
+    cls != null &&
+    (isLeading || formError === null);
 
   const toggle = (id: string) => {
     setSelected((prev) =>
@@ -127,13 +138,12 @@ export function PlayTrick({ view }: { view: MomontyView }) {
 
   const submit = () => {
     if (!submitOk || !cls) return;
-    const wildAsValue = cls.wildBase;
     send({
       t: "action",
       action: {
         t: "playCards",
         cardIds: selected,
-        wildAsValue,
+        wildAsValue: cls.wildBase,
         straightLength: cls.kind === "straight" ? cls.size : undefined,
       },
     });
@@ -169,7 +179,9 @@ export function PlayTrick({ view }: { view: MomontyView }) {
     }
     if (selectedCards.length === 0) return isLeading ? "카드를 골라 리드" : "카드 선택 또는 패스";
     if (!cls) return "낼 수 없는 조합";
-    if (!isLeading && !canBeat) return `${cls.value} ×${cls.size} · 더 낮음`;
+    if (formError === "form-mismatch")
+      return `형태 불일치 · ${describeForm(view.currentTrick.form)} 필요`;
+    if (formError === "too-weak") return `${cls.value} ×${cls.size} · 더 낮아야 함`;
     const suffix = isLeading ? "리드 ▶" : "내기 ▶";
     return hasWild
       ? `${cls.value} ×${cls.size} (★와일드) ${suffix}`
@@ -178,9 +190,9 @@ export function PlayTrick({ view }: { view: MomontyView }) {
 
   const ctaTone: "gold" | "green" | "purple" | "muted" = !myTurn
     ? "muted"
-    : hasWild
+    : hasWild && submitOk
     ? "purple"
-    : isLeading
+    : isLeading && submitOk
     ? "gold"
     : submitOk
     ? "green"
@@ -188,7 +200,7 @@ export function PlayTrick({ view }: { view: MomontyView }) {
 
   return (
     <div className="play-trick">
-      <PlayHeader isLeading={isLeading} myTurn={myTurn} />
+      <PlayHeader isLeading={isLeading} myTurn={myTurn} seatKey={view.currentSeatId ?? ""} />
 
       <OpponentStrip view={view} />
 
@@ -199,23 +211,20 @@ export function PlayTrick({ view }: { view: MomontyView }) {
       {selectedCards.length > 0 && cls ? (
         <SelectedPreview
           cls={cls}
-          canBeat={isLeading || canBeat}
+          formError={formError}
           hasWild={hasWild}
           isLeading={isLeading}
         />
       ) : null}
 
-      <div className="hand-header">
-        <span className="hand-label">
-          내 손패 <b>{hand.length}장</b> · 같은 숫자끼리 묶임
-        </span>
+      <div className="hand-label">
+        내 손패 <b>{hand.length}장</b> · 같은 숫자끼리 묶임
       </div>
       <HandStrip
         hand={hand}
         selected={selected}
         form={view.currentTrick.form}
         onToggle={toggle}
-        sortMode={sortMode}
       />
 
       <div className="action-bar">
@@ -223,9 +232,7 @@ export function PlayTrick({ view }: { view: MomontyView }) {
           <button
             type="button"
             className="side-btn"
-            onClick={() =>
-              setSortMode((m) => (m === "group" ? "value" : "group"))
-            }
+            onClick={() => setSelected([])}
           >
             정렬
           </button>
@@ -258,18 +265,52 @@ export function PlayTrick({ view }: { view: MomontyView }) {
   );
 }
 
+function describeForm(f: TrickForm): string {
+  if (f.kind === "single") return "1장";
+  if (f.kind === "pair") return "2장 (페어)";
+  if (f.kind === "triple") return "3장 (트리플)";
+  if (f.kind === "quad") return "4장 (쿼드)";
+  if (f.kind === "straight") return `${f.length}장 스트레이트`;
+  return "";
+}
+
 /* -------------------------- Sub-components -------------------------- */
 
-function PlayHeader({ isLeading, myTurn }: { isLeading: boolean; myTurn: boolean }) {
+function PlayHeader({
+  isLeading,
+  myTurn,
+  seatKey,
+}: {
+  isLeading: boolean;
+  myTurn: boolean;
+  seatKey: string;
+}) {
+  const [remaining, setRemaining] = useState(TURN_LIMIT);
+  const seatRef = useRef(seatKey);
+  useEffect(() => {
+    if (seatRef.current !== seatKey) {
+      seatRef.current = seatKey;
+      setRemaining(TURN_LIMIT);
+    }
+    const id = setInterval(() => {
+      setRemaining((r) => (r > 0 ? r - 1 : 0));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [seatKey]);
+  const pct = remaining / TURN_LIMIT;
+  const expired = remaining === 0;
   return (
     <div className="play-header">
       <span className={`turn-pill ${myTurn ? "on" : "off"}`}>
         {myTurn ? <span className="turn-dot" /> : null}
         {myTurn ? (isLeading ? "내 리드 차례" : "내 차례") : "상대 차례"}
       </span>
-      <div className="timer-ring">
+      <div
+        className={`timer-ring ${expired ? "expired" : ""}`}
+        style={{ ["--timer-pct" as any]: pct }}
+      >
         <div className="timer-ring-inner">
-          <span className="timer-value">15</span>
+          <span className="timer-value">{remaining}</span>
           <span className="timer-unit">s</span>
         </div>
       </div>
@@ -347,25 +388,33 @@ function PileBox({
 
 function SelectedPreview({
   cls,
-  canBeat,
+  formError,
   hasWild,
   isLeading,
 }: {
   cls: Classification;
-  canBeat: boolean;
+  formError: ClsError;
   hasWild: boolean;
   isLeading: boolean;
 }) {
-  const tone = !canBeat ? "bad" : hasWild ? "wild" : isLeading ? "lead" : "good";
-  const label = !canBeat
-    ? "· 더 낮음"
-    : cls.kind === "none"
-    ? ""
-    : hasWild
-    ? "· ★ 와일드"
-    : isLeading
-    ? "· 리드 준비"
-    : "· 더 강함 ✓";
+  const tone: "good" | "bad" | "wild" | "lead" =
+    formError !== null
+      ? "bad"
+      : hasWild
+      ? "wild"
+      : isLeading
+      ? "lead"
+      : "good";
+  const label =
+    formError === "form-mismatch"
+      ? "· 형태 불일치"
+      : formError === "too-weak"
+      ? "· 더 낮아야 함"
+      : hasWild
+      ? "· ★ 와일드"
+      : isLeading
+      ? "· 리드 준비"
+      : "· 더 강함 ✓";
   return (
     <div className={`sel-pill sel-${tone}`}>
       <span>
@@ -387,55 +436,53 @@ function HandStrip({
   selected,
   form,
   onToggle,
-  sortMode,
 }: {
   hand: MCard[];
   selected: string[];
   form: TrickForm;
   onToggle: (id: string) => void;
-  sortMode: "value" | "group";
 }) {
   const sorted = useMemo(() => {
-    // Both modes sort ascending; "group" applies additional per-value grouping
-    // hint via CSS by giving neighbouring same-value cards a shared marker.
     return [...hand].sort((a, b) => {
       if (a.value == null && b.value == null) return 0;
       if (a.value == null) return 1;
       if (b.value == null) return -1;
       return a.value - b.value;
     });
-  }, [hand, sortMode]);
-  return (
-    <div className="hand-strip">
-      {sorted.map((c, i) => {
-        const isSel = selected.includes(c.id);
-        const valid = isValidCardInForm(c, form);
-        const wild = c.value == null;
-        const tone = wild ? "wild" : c.value! === 1 ? "royal" : "white";
-        const disabled = form.kind !== "none" && !valid && !wild;
-        const prev = sorted[i - 1];
-        const groupsWithPrev =
-          !wild && prev && !isDif(c, prev);
-        return (
-          <button
-            key={c.id}
-            type="button"
-            className={`hand-card ${groupsWithPrev ? "grouped" : ""}`}
-            data-tone={tone}
-            data-selected={isSel ? "true" : "false"}
-            data-disabled={disabled ? "true" : "false"}
-            onClick={() => onToggle(c.id)}
-          >
-            {c.value === 1 ? <span className="mini-crown">👑</span> : null}
-            {c.value ?? "★"}
-          </button>
-        );
-      })}
-    </div>
-  );
+  }, [hand]);
+  const nodes: React.ReactNode[] = [];
+  for (let i = 0; i < sorted.length; i++) {
+    const c = sorted[i];
+    const isSel = selected.includes(c.id);
+    const valid = isValidCardInForm(c, form);
+    const wild = c.value == null;
+    const tone = wild ? "wild" : c.value! === 1 ? "royal" : "white";
+    const disabled = form.kind !== "none" && !valid && !wild;
+    const prev = sorted[i - 1];
+    // Insert a small separator when the value changes (creates visual
+    // grouping without pretending cards overlap).
+    if (prev && !sameValue(prev, c)) {
+      nodes.push(<span key={`sep-${i}`} className="group-sep" aria-hidden />);
+    }
+    nodes.push(
+      <button
+        key={c.id}
+        type="button"
+        className="hand-card"
+        data-tone={tone}
+        data-selected={isSel ? "true" : "false"}
+        data-disabled={disabled ? "true" : "false"}
+        onClick={() => onToggle(c.id)}
+      >
+        {c.value === 1 ? <span className="mini-crown">👑</span> : null}
+        {c.value ?? "★"}
+      </button>
+    );
+  }
+  return <div className="hand-strip">{nodes}</div>;
 }
 
-function isDif(a: MCard, b: MCard): boolean {
-  if (a.value == null && b.value == null) return false;
-  return a.value !== b.value;
+function sameValue(a: MCard, b: MCard): boolean {
+  if (a.value == null && b.value == null) return true;
+  return a.value === b.value;
 }

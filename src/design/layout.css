@@ -658,6 +658,53 @@
   font-size: 13px;
 }
 
+/* -------------------------- Confirm dialog -------------------------- */
+
+.confirm-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 4, 15, 0.72);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 340;
+  animation: rules-fade var(--dur-med) var(--easing);
+}
+.confirm-card {
+  width: 100%;
+  max-width: 320px;
+  padding: 22px 22px calc(22px + env(safe-area-inset-bottom));
+  border-radius: 22px;
+  background: linear-gradient(160deg, var(--surface-2), var(--surface-1));
+  border: 1px solid var(--glass-border-3);
+  text-align: center;
+  animation: rules-up var(--dur-med) var(--easing);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+.confirm-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+.confirm-title {
+  color: #fff;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 17px;
+  margin-top: 8px;
+}
+.confirm-message {
+  color: var(--text-4);
+  font-size: 12.5px;
+  margin-top: 6px;
+  line-height: 1.5;
+}
+.confirm-actions {
+  margin-top: 18px;
+  display: flex;
+  gap: 8px;
+}
+
 /* -------------------------- Toast -------------------------- */
 
 .toast-wrap {

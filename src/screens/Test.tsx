@@ -15,6 +15,7 @@ import { PHASE_VIEWS } from "@web/games/momonty/phases";
 import { FooterBar, HeaderActions, ScreenBody, StatusBadge, RulesButton } from "@web/design/layout";
 import { openRules } from "./RulesSheet";
 import { momontyGame } from "@shared/games/momonty/logic";
+import { ConfirmDialog } from "@web/design/ConfirmDialog";
 import "./test.css";
 
 /**
@@ -160,29 +161,19 @@ function TestPlay() {
           <PhaseView view={view} key={`${version}-${acting}-${spec.id}`} />
         </ScreenBody>
       </PhoneFrame>
-      {confirmLeave ? (
-        <div className="menu-scrim" onClick={() => setConfirmLeave(false)}>
-          <div className="menu-sheet center" onClick={(e) => e.stopPropagation()}>
-            <div className="menu-title">테스트에서 나갈까요?</div>
-            <div className="menu-sub">방 설정 화면으로 돌아갑니다</div>
-            <div className="menu-row">
-              <Button full variant="ghost" onClick={() => setConfirmLeave(false)}>
-                계속 진행
-              </Button>
-              <Button
-                full
-                variant="primary"
-                onClick={() => {
-                  setConfirmLeave(false);
-                  resetTest();
-                }}
-              >
-                나가기
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <ConfirmDialog
+        open={confirmLeave}
+        icon="🚪"
+        title="게임에서 나갈까요?"
+        message="진행 중인 판은 저장되지 않아요"
+        cancelLabel="계속 진행"
+        confirmLabel="나가기"
+        onCancel={() => setConfirmLeave(false)}
+        onConfirm={() => {
+          setConfirmLeave(false);
+          resetTest();
+        }}
+      />
     </DesktopStage>
   );
 }
