@@ -396,6 +396,13 @@ function TestPlay() {
         <ScreenBody>
           <PhaseView view={view} key={`${version}-${acting}-${spec.id}`} />
         </ScreenBody>
+        {rawState.phase === "MATCH_END" ? (
+          <FooterBar>
+            <Button full variant="ghost" onClick={() => resetTest()}>
+              🧪 새 테스트
+            </Button>
+          </FooterBar>
+        ) : null}
       </PhoneFrame>
       <ConfirmDialog
         open={confirmLeave}
