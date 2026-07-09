@@ -27,6 +27,21 @@
   gap: 12px;
   padding: 0 2px;
 }
+.history-chip {
+  align-self: flex-end;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(242, 193, 78, 0.14);
+  border: 1px solid rgba(242, 193, 78, 0.32);
+  color: #f8d98a;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: -6px;
+}
+.history-chip:hover {
+  background: rgba(242, 193, 78, 0.2);
+}
 .turn-pill {
   display: inline-flex;
   align-items: center;

@@ -252,6 +252,15 @@ export function PlayTrick({ view }: { view: MomontyView }) {
         seatKey={view.currentSeatId ?? ""}
         onTimeout={canPass && myTurn ? doPass : undefined}
       />
+      <button
+        type="button"
+        className="history-chip"
+        onClick={() =>
+          window.dispatchEvent(new CustomEvent("momonti:history:open"))
+        }
+      >
+        📜 히스토리
+      </button>
 
       <OpponentStrip view={view} />
 

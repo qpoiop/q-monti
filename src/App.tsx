@@ -14,6 +14,7 @@ import { ExitConfirm } from "./screens/ExitConfirm";
 import { RulesSheet } from "./screens/RulesSheet";
 import { EventFx } from "./design/effects/EventFx";
 import { RevolutionOverlay } from "./games/momonty/phases/RevolutionOverlay";
+import { HistorySheet } from "./games/momonty/phases/HistorySheet";
 import { initRouter } from "./nav/router";
 import { registerSW } from "./pwa/register";
 
@@ -51,6 +52,7 @@ export function App() {
       </div>
       <EventFx />
       <RevolutionOverlay />
+      <HistorySheet />
       <InstallLayer />
       <ConnectionOverlay />
       <ExitConfirm />
