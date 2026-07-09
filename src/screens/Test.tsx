@@ -41,7 +41,13 @@ export function TestScreen() {
 function TestSetup() {
   const [tab, setTab] = useState<"basic" | "advanced">("basic");
   const [seats, setSeats] = useState<number>(4);
-  const [config, setConfig] = useState<any>(momontyGame.defaultConfig());
+  // Test mode defaults to a short match (2 rounds) so testers can watch
+  // MATCH_END without spending several minutes clicking through 7 full
+  // rounds. Users can still bump it up in the setup form.
+  const [config, setConfig] = useState<any>({
+    ...momontyGame.defaultConfig(),
+    targetRounds: 2,
+  });
   const set = (patch: any) => {
     const next = { ...config, ...patch };
     // Revolution depends on taxation — auto-disable when tax is off.
