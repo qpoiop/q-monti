@@ -209,6 +209,21 @@
   text-align: center;
   animation: m-pop var(--dur-med) var(--easing);
 }
+.dialog-title {
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 18px;
+  color: #fff;
+  margin-top: 4px;
+}
+.dialog-sub {
+  color: var(--text-4);
+  font-size: 12px;
+  margin-top: 6px;
+}
+.dialog-actions {
+  margin-top: 18px;
+}
 
 .bottom-sheet {
   background: linear-gradient(165deg, var(--surface-2), var(--surface-1));
@@ -324,6 +339,89 @@
   flex-wrap: wrap;
 }
 
+/* -------------------------- Seat ring (Momonty) -------------------------- */
+
+.seat-ring {
+  position: relative;
+  flex: 1;
+  min-height: 220px;
+}
+.seat-ring-pile {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-soft), rgba(255, 255, 255, 0.03));
+  border: 1.5px solid var(--accent-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+.seat-ring-pile-label {
+  color: var(--text-5);
+  font-size: 9px;
+}
+.seat-ring-pile-form {
+  color: var(--accent-1);
+  font-family: var(--font-brand);
+  font-size: 9px;
+}
+.seat-ring-slot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(calc(-50% + var(--slot-x)), calc(-50% + var(--slot-y)));
+  text-align: center;
+  border-radius: 999px;
+  padding: 4px;
+}
+.seat-ring-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--slot-color) 20%, transparent);
+  border: 1.5px solid var(--slot-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--slot-color);
+  font-weight: 700;
+  margin: 0 auto;
+}
+.seat-ring-avatar[data-passed="true"] {
+  opacity: 0.4;
+}
+.seat-ring-count {
+  font-size: 9px;
+  color: var(--text-5);
+  margin-top: 2px;
+}
+
+.room-code {
+  color: #fff;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: 0.14em;
+}
+.seat-status-pos {
+  color: var(--pos-1);
+  font-weight: 700;
+}
+.seat-status-idle {
+  color: var(--text-5);
+}
+.seat-status-danger {
+  color: var(--neg-1);
+  font-weight: 700;
+}
+
 /* -------------------------- Field inputs -------------------------- */
 
 .field-input {
@@ -397,6 +495,29 @@
 }
 .body {
   font-size: 13px;
+}
+
+/* -------------------------- Toast -------------------------- */
+
+.toast-wrap {
+  position: fixed;
+  bottom: 24px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 200;
+}
+.toast {
+  background: rgba(20, 15, 40, 0.94);
+  border: 1px solid var(--glass-border-3);
+  border-radius: 999px;
+  padding: 10px 18px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.7);
 }
 
 /* -------------------------- Motion helpers -------------------------- */

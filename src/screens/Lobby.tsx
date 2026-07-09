@@ -1,17 +1,18 @@
 import { PhoneFrame } from "@web/design/PhoneFrame";
-import {
-  BottomBar,
-  Button,
-  Card,
-  Pill,
-  ScreenHeader,
-} from "@web/design/primitives";
-import { leaveRoom, send, useStore } from "@web/state/store";
+import { Button, Card, Pill, ScreenHeader } from "@web/design/primitives";
+import { leaveRoom, useStore } from "@web/state/store";
 import { navigate } from "@web/nav/router";
-import { openRules } from "./RulesSheet";
 import { DesktopStage } from "./DesktopStage";
 import type { SeatPublic } from "@shared/protocol";
+import { FooterBar, Hint, HeaderActions, Row, RulesButton, ScreenBody, Stack } from "@web/design/layout";
+import { openRules } from "./RulesSheet";
+import { send } from "@web/state/store";
 
+/**
+ * Lobby derives readiness + host controls from `room.seats`. Nothing in the
+ * template branches on inline styling — all visual states come from either
+ * layout primitives or dedicated CSS classes.
+ */
 export function LobbyScreen() {
   const room = useStore((s) => s.room);
   const userId = useStore((s) => s.session.userId);
@@ -20,9 +21,9 @@ export function LobbyScreen() {
       <DesktopStage>
         <PhoneFrame>
           <ScreenHeader title="대기실 로딩" onBack={() => navigate({ name: "home" })} />
-          <div style={{ padding: 16, color: "var(--text-5)", fontSize: 12 }}>
-            방 상태 동기화 중…
-          </div>
+          <ScreenBody>
+            <Hint>방 상태 동기화 중…</Hint>
+          </ScreenBody>
         </PhoneFrame>
       </DesktopStage>
     );
@@ -32,6 +33,21 @@ export function LobbyScreen() {
   const isHost = mine?.isHost ?? false;
   const readyCount = room.seats.filter((s) => s.ready || s.isHost).length;
   const canStart = readyCount === room.seats.length && room.seats.length >= 2;
+  const emptySlots = Math.max(0, room.maxPlayers - room.seats.length);
+
+  const primary = isHost
+    ? {
+        label: canStart
+          ? "전원 준비 완료 · 시작"
+          : `전원 준비 대기 (${readyCount}/${room.seats.length})`,
+        disabled: !canStart,
+        onClick: () => send({ t: "startMatch" }),
+      }
+    : {
+        label: mine?.ready ? "준비 취소" : "준비 완료",
+        disabled: false,
+        onClick: () => send({ t: "setReady", ready: !mine?.ready }),
+      };
 
   return (
     <DesktopStage>
@@ -43,186 +59,89 @@ export function LobbyScreen() {
             navigate({ name: "home" });
           }}
           right={
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <button
-                type="button"
-                onClick={() => openRules(room.gameId)}
-                style={{
-                  padding: "5px 10px",
-                  borderRadius: 999,
-                  background: "var(--glass-2)",
-                  border: "1px solid var(--glass-border-1)",
-                  color: "var(--text-4)",
-                  fontSize: 11,
-                }}
-              >
-                규칙 ⓘ
-              </button>
-              <span style={{ fontSize: 11, color: "var(--text-5)" }}>
+            <HeaderActions>
+              <RulesButton onClick={() => openRules(room.gameId)} />
+              <span className="small" style={{ color: "var(--text-5)" }}>
                 {room.seats.length}/{room.maxPlayers}
               </span>
-            </div>
+            </HeaderActions>
           }
         />
-        <div style={{ padding: "8px 16px 0", display: "flex", flexDirection: "column", gap: 10 }}>
-          <Card tone="accent" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div>
-              <div style={{ color: "var(--text-5)", fontSize: 9.5, fontWeight: 700 }}>
-                방 코드
-              </div>
-              <div
-                style={{
-                  color: "#fff",
-                  fontFamily: "var(--font-brand)",
-                  fontWeight: 800,
-                  fontSize: 22,
-                  letterSpacing: ".14em",
-                }}
-              >
-                {room.code}
-              </div>
-            </div>
-            <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-              <ChipButton
-                onClick={() => navigator.clipboard.writeText(room.code)}
-              >
-                복사
-              </ChipButton>
-              <ChipButton
-                onClick={() =>
-                  navigator.share
-                    ? navigator.share({ text: `모몬티 방 코드: ${room.code}` })
-                    : navigator.clipboard.writeText(
-                        `${location.origin} 코드: ${room.code}`
-                      )
-                }
-              >
-                공유
-              </ChipButton>
-            </div>
+        <ScreenBody>
+          <Card tone="accent">
+            <Row>
+              <Stack gap={4}>
+                <span className="tiny" style={{ color: "var(--text-5)", fontWeight: 700 }}>
+                  방 코드
+                </span>
+                <span className="room-code">{room.code}</span>
+              </Stack>
+              <Row gap={6} className="push-right">
+                <button
+                  type="button"
+                  className="chip-btn"
+                  onClick={() => navigator.clipboard.writeText(room.code)}
+                >
+                  복사
+                </button>
+                <button
+                  type="button"
+                  className="chip-btn"
+                  onClick={() =>
+                    navigator.share
+                      ? navigator.share({ text: `모몬티 방 코드: ${room.code}` })
+                      : navigator.clipboard.writeText(`${location.origin} 코드: ${room.code}`)
+                  }
+                >
+                  공유
+                </button>
+              </Row>
+            </Row>
           </Card>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+          <Stack gap={6}>
             {room.seats.map((s) => (
               <SeatRow key={s.seatId} s={s} />
             ))}
-            {Array.from({ length: Math.max(0, room.maxPlayers - room.seats.length) }).map(
-              (_, i) => (
-                <Card tone="dashed" key={`empty${i}`}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span
-                      style={{
-                        width: 30,
-                        height: 30,
-                        borderRadius: "50%",
-                        background: "rgba(255,255,255,.05)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 14,
-                        color: "var(--text-6)",
-                      }}
-                    >
-                      ＋
-                    </span>
-                    <span style={{ color: "var(--text-6)", fontSize: 12 }}>
-                      빈 자리 · 초대 대기
-                    </span>
-                  </div>
-                </Card>
-              )
-            )}
-          </div>
-        </div>
-        <BottomBar>
-          {isHost ? (
-            <Button
-              full
-              variant="primary"
-              disabled={!canStart}
-              onClick={() => send({ t: "startMatch" })}
-            >
-              {canStart ? "전원 준비 완료 · 시작" : `전원 준비 대기 (${readyCount}/${room.seats.length})`}
-            </Button>
-          ) : (
-            <Button
-              full
-              variant="primary"
-              onClick={() => send({ t: "setReady", ready: !mine?.ready })}
-            >
-              {mine?.ready ? "준비 취소" : "준비 완료"}
-            </Button>
-          )}
-        </BottomBar>
+            {Array.from({ length: emptySlots }).map((_, i) => (
+              <div key={`empty${i}`} className="seat-row" style={{ borderStyle: "dashed" }}>
+                <span className="seat-avatar" style={{ background: "var(--glass-2)" }}>＋</span>
+                <span className="small" style={{ color: "var(--text-6)" }}>빈 자리 · 초대 대기</span>
+              </div>
+            ))}
+          </Stack>
+        </ScreenBody>
+        <FooterBar>
+          <Button full variant="primary" disabled={primary.disabled} onClick={primary.onClick}>
+            {primary.label}
+          </Button>
+        </FooterBar>
       </PhoneFrame>
     </DesktopStage>
   );
 }
 
-function ChipButton({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        padding: "8px 11px",
-        borderRadius: 10,
-        background: "rgba(255,255,255,.1)",
-        color: "var(--accent-3)",
-        fontSize: 11,
-        fontWeight: 700,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
 function SeatRow({ s }: { s: SeatPublic }) {
+  const statusTone: "pos" | "idle" | "danger" = !s.online ? "danger" : s.ready || s.isHost ? "pos" : "idle";
+  const statusLabel = !s.online
+    ? "연결 끊김"
+    : s.ready || s.isHost
+    ? "준비완료"
+    : "대기중…";
+
   return (
-    <Card>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, var(--brand-purple-1), var(--brand-purple-2))",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 12,
-            color: "#fff",
-          }}
-        >
-          {(s.displayName[0] || "?").toUpperCase()}
-        </span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: "#fff", fontSize: 12.5, fontWeight: 700 }}>
-            {s.displayName}
-            {s.isHost ? (
-              <Pill tone="accent" style={{ marginLeft: 6, fontSize: 9, padding: "1px 6px" }}>
-                👑 방장
-              </Pill>
-            ) : null}
-          </div>
+    <div className="seat-row">
+      <span className="seat-avatar">{(s.displayName[0] || "?").toUpperCase()}</span>
+      <div className="grow">
+        <div className="body" style={{ color: "#fff", fontWeight: 700 }}>
+          {s.displayName}
+          {s.isHost ? (
+            <Pill tone="accent" style={{ marginLeft: 6, fontSize: 9, padding: "1px 6px" }}>
+              👑 방장
+            </Pill>
+          ) : null}
         </div>
-        {!s.online ? (
-          <span style={{ color: "var(--neg-1)", fontSize: 11, fontWeight: 700 }}>
-            연결 끊김
-          </span>
-        ) : s.ready || s.isHost ? (
-          <span style={{ color: "var(--pos-1)", fontSize: 11, fontWeight: 700 }}>준비완료</span>
-        ) : (
-          <span style={{ color: "var(--text-5)", fontSize: 11 }}>대기중…</span>
-        )}
       </div>
-    </Card>
+      <span className={`small seat-status seat-status-${statusTone}`}>{statusLabel}</span>
+    </div>
   );
 }

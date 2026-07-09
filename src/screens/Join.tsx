@@ -1,96 +1,61 @@
 import { useState } from "react";
 import { PhoneFrame } from "@web/design/PhoneFrame";
-import { BottomBar, Button, ScreenHeader } from "@web/design/primitives";
+import { Button, ScreenHeader } from "@web/design/primitives";
 import { joinRoomByCode } from "@web/state/store";
 import { navigate } from "@web/nav/router";
 import { DesktopStage } from "./DesktopStage";
+import { FooterBar, Hint, Row, ScreenBody, Stack } from "@web/design/layout";
+
+/**
+ * Data-driven keypad — layout stays declarative so the 12-key grid maps
+ * one-to-one with a config array. No branchy per-key styling in JSX.
+ */
+const KEYS: string[] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "ABC", "0", "⌫"];
+const CODE_LEN = 6;
 
 export function JoinScreen() {
   const [code, setCode] = useState("");
+  const canSubmit = code.length === CODE_LEN;
+
+  function press(k: string) {
+    if (k === "⌫") setCode((c) => c.slice(0, -1));
+    else if (k === "ABC") {
+      const c = prompt("영문 입력") ?? "";
+      if (c) setCode((prev) => (prev + c.toUpperCase()).slice(0, CODE_LEN));
+    } else if (code.length < CODE_LEN) setCode((c) => c + k);
+  }
 
   return (
     <DesktopStage>
       <PhoneFrame>
         <ScreenHeader title="코드로 입장" onBack={() => navigate({ name: "home" })} />
-        <div style={{ padding: "8px 16px 0", display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ color: "var(--text-5)", fontSize: 11.5 }}>
-            방장이 공유한 6자리 코드를 입력하세요
-          </div>
-          <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 12 }}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <span
-                key={i}
-                style={{
-                  width: 38,
-                  height: 52,
-                  borderRadius: 11,
-                  background:
-                    code.length === i
-                      ? "var(--accent-soft)"
-                      : "var(--glass-3)",
-                  border:
-                    code.length === i
-                      ? "2px solid var(--accent-1)"
-                      : "1px solid var(--glass-border-3)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontFamily: "var(--font-brand)",
-                  fontWeight: 800,
-                  fontSize: 24,
-                  color: "#fff",
-                  boxShadow:
-                    code.length === i ? "0 0 12px var(--accent-glow)" : undefined,
-                }}
-              >
+        <ScreenBody>
+          <Hint>방장이 공유한 {CODE_LEN}자리 코드를 입력하세요</Hint>
+          <Row center gap={6} className="row-tight">
+            {Array.from({ length: CODE_LEN }).map((_, i) => (
+              <span key={i} className="code-cell" data-focus={code.length === i ? "true" : "false"}>
                 {code[i] ?? ""}
-                {code.length === i ? (
-                  <span
-                    style={{
-                      width: 1,
-                      height: 22,
-                      background: "var(--accent-1)",
-                      marginLeft: 2,
-                      animation: "m-blink 1s infinite",
-                    }}
-                  />
-                ) : null}
               </span>
             ))}
-          </div>
-
-          <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
-            {["1", "2", "3", "4", "5", "6", "7", "8", "9", "ABC", "0", "⌫"].map((k) => (
+          </Row>
+          <div className="keypad">
+            {KEYS.map((k) => (
               <button
                 key={k}
                 type="button"
-                onClick={() => {
-                  if (k === "⌫") setCode(code.slice(0, -1));
-                  else if (k === "ABC") {
-                    const c = prompt("영문 입력");
-                    if (c) setCode((code + c.toUpperCase()).slice(0, 6));
-                  } else if (code.length < 6) setCode(code + k);
-                }}
-                style={{
-                  padding: "14px 0",
-                  borderRadius: 12,
-                  background: "var(--glass-3)",
-                  color: "var(--text-2)",
-                  fontFamily: "var(--font-brand)",
-                  fontWeight: 700,
-                  fontSize: k === "⌫" || k === "ABC" ? 14 : 18,
-                }}
+                className={k === "⌫" || k === "ABC" ? "secondary" : ""}
+                onClick={() => press(k)}
               >
                 {k}
               </button>
             ))}
           </div>
-        </div>
-        <BottomBar>
+        </ScreenBody>
+        <FooterBar>
           <Button
             full
             variant="primary"
-            disabled={code.length !== 6}
+            disabled={!canSubmit}
             onClick={() =>
               joinRoomByCode(code).then((ok) => {
                 if (ok) navigate({ name: "lobby" });
@@ -99,7 +64,7 @@ export function JoinScreen() {
           >
             입장하기 ▶
           </Button>
-        </BottomBar>
+        </FooterBar>
       </PhoneFrame>
     </DesktopStage>
   );
