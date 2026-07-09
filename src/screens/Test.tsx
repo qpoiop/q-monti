@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PhoneFrame } from "@web/design/PhoneFrame";
 import { Button, ScreenHeader, SettingRow, Stepper, Toggle } from "@web/design/primitives";
 import { DesktopStage } from "./DesktopStage";
@@ -97,6 +97,42 @@ function TestSetup() {
   );
 }
 
+/* -------------------------- Round banner -------------------------- */
+
+/**
+ * Big centred "라운드 N 시작" overlay that fades in when the round
+ * counter increments. Lets the player feel the transition instead of
+ * silently landing on the next round.
+ */
+function RoundBanner({ phase, round }: { phase: string; round: number }) {
+  const [visible, setVisible] = useState(false);
+  const lastRoundRef = useRef(round);
+  useEffect(() => {
+    if (lastRoundRef.current !== round) {
+      lastRoundRef.current = round;
+      setVisible(true);
+      const id = setTimeout(() => setVisible(false), 1800);
+      return () => clearTimeout(id);
+    }
+  }, [round]);
+  if (!visible) return null;
+  return (
+    <div className="round-banner">
+      <div className="round-banner-card">
+        <div className="round-banner-eyebrow">ROUND</div>
+        <div className="round-banner-number">{round}</div>
+        <div className="round-banner-sub">
+          {phase === "DRAWING_RANK"
+            ? "서열 결정"
+            : phase === "TAXATION"
+            ? "과세 단계"
+            : "플레이 시작"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* -------------------------- Play -------------------------- */
 
 function TestPlay() {
@@ -137,26 +173,32 @@ function TestPlay() {
             </HeaderActions>
           }
         />
-        <div className="test-seat-picker">
-          {rawState.seatOrder.map((seatId) => (
-            <button
-              key={seatId}
-              type="button"
-              className="test-seat-btn"
-              data-active={seatId === acting ? "true" : "false"}
-              data-turn={seatId === view.currentSeatId ? "true" : "false"}
-              data-out={(view.handCounts[seatId] ?? 0) === 0 ? "true" : "false"}
-              data-lead={seatId === leaderSeatId ? "true" : "false"}
-              onClick={() => setActingSeat(seatId)}
-            >
-              <span className="test-seat-name">
-                {seatNames[seatId] ?? seatId}
-                {seatId === leaderSeatId ? <span className="lead-badge">선</span> : null}
-              </span>
-              <span className="test-seat-hand">{view.handCounts[seatId] ?? 0}장</span>
-            </button>
-          ))}
+        <div className="test-seat-picker-wrap">
+          <div className="test-seat-picker-label">
+            🧪 테스트 · 좌석 전환
+          </div>
+          <div className="test-seat-picker">
+            {rawState.seatOrder.map((seatId) => (
+              <button
+                key={seatId}
+                type="button"
+                className="test-seat-btn"
+                data-active={seatId === acting ? "true" : "false"}
+                data-turn={seatId === view.currentSeatId ? "true" : "false"}
+                data-out={(view.handCounts[seatId] ?? 0) === 0 ? "true" : "false"}
+                data-lead={seatId === leaderSeatId ? "true" : "false"}
+                onClick={() => setActingSeat(seatId)}
+              >
+                <span className="test-seat-name">
+                  {seatNames[seatId] ?? seatId}
+                  {seatId === leaderSeatId ? <span className="lead-badge">선</span> : null}
+                </span>
+                <span className="test-seat-hand">{view.handCounts[seatId] ?? 0}장</span>
+              </button>
+            ))}
+          </div>
         </div>
+        <RoundBanner phase={rawState.phase} round={view.round} />
         <ScreenBody>
           <PhaseView view={view} key={`${version}-${acting}-${spec.id}`} />
         </ScreenBody>

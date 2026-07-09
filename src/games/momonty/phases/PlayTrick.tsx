@@ -321,19 +321,25 @@ function PlayHeader({
 function OpponentStrip({ view }: { view: MomontyView }) {
   const others = view.seatOrder.filter((s) => s !== view.mySeatId);
   const names = view.seatNames ?? {};
+  const leaderId = view.currentTrick.leaderSeatId;
   return (
     <div className="opp-strip">
       {others.map((s) => {
         const passed = view.currentTrick.passSeatIds.includes(s);
         const isTurn = view.currentSeatId === s;
+        const isLead = s === leaderId;
         return (
           <div
             key={s}
             className="opp-cell"
             data-turn={isTurn ? "true" : "false"}
             data-passed={passed ? "true" : "false"}
+            data-lead={isLead ? "true" : "false"}
           >
-            <div className="opp-name">{names[s] ?? s.slice(-2)}</div>
+            <div className="opp-name">
+              {names[s] ?? s.slice(-2)}
+              {isLead ? <span className="opp-lead-chip">선</span> : null}
+            </div>
             <div className="opp-count">
               <span className="opp-back-icon" aria-hidden>
                 🂠
@@ -369,6 +375,11 @@ function PileBox({
   const top = view.currentTrick.topPlay;
   if (!top) return null;
   const from = seatNames[top.seatId] ?? top.seatId.slice(-2);
+  const passCount = view.currentTrick.passSeatIds.length;
+  const activeSeats = view.seatOrder.filter(
+    (s) => (view.handCounts[s] ?? 0) > 0
+  ).length;
+  const remaining = Math.max(0, activeSeats - passCount - 1); // -1 = the topPlay seat
   return (
     <div className="pile pile-active">
       <div className="pile-head">
@@ -381,6 +392,10 @@ function PileBox({
             {c.value == null ? "★" : c.value}
           </div>
         ))}
+      </div>
+      <div className="pile-footer">
+        패스 <b className="pile-pass">{passCount}</b> · 남은 인원{" "}
+        <b className="pile-remain">{remaining}</b>명
       </div>
     </div>
   );

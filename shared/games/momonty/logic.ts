@@ -470,12 +470,18 @@ function beginRound(state: MomontyState, rng: Rng): void {
   for (let i = 0; i < seats.length; i++) {
     state.hands[seats[i]] = deck.slice(i * handSize, i * handSize + handSize);
   }
-  // Left-over cards go to the bottom of Grand Momonty (nice-to-have), or to
-  // first seat if no ranks yet. For simplicity, distribute round-robin to top.
+  // Remainder gets distributed round-robin starting from the top rank so
+  // hand counts differ by at most one card. Prior implementation dumped
+  // the whole remainder onto the top seat which felt broken (host with
+  // wildly more cards than everyone else).
   const remainder = deck.slice(seats.length * handSize);
   const topSeat =
     Object.entries(state.ranks).find(([, r]) => r === "GRAND_MOMONTY")?.[0] ?? seats[0];
-  state.hands[topSeat].push(...remainder);
+  const startIdx = seats.indexOf(topSeat);
+  for (let i = 0; i < remainder.length; i++) {
+    const seat = seats[(startIdx + i) % seats.length];
+    state.hands[seat].push(remainder[i]);
+  }
 
   state.outOrder = [];
   state.taxation = {
