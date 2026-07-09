@@ -25,14 +25,30 @@
 .screen-shell {
   flex: 1;
   width: 100%;
-  height: 100%;
+  /* Ratio-preserving cap:
+   *   The mockup is 260 wide × 600 tall (0.4333 aspect).
+   *   We keep max-width 440 for readability on tablets,
+   *   and cap height at 720 so tall viewports don't stretch the shell
+   *   into an ugly slab.
+   *   height: min(100dvh, aspect-derived) — width scales down if the
+   *   window is narrower than 440.
+   */
   max-width: 440px;
+  height: min(100dvh, 720px);
+  max-height: 100dvh;
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
   box-shadow: 0 0 0 1px var(--glass-border-1);
   min-height: 0;
+}
+@media (max-width: 460px) {
+  .screen-shell {
+    width: 100%;
+    max-width: 100%;
+    height: min(100dvh, calc(100vw * 620 / 260));
+  }
 }
 .screen-content {
   flex: 1;

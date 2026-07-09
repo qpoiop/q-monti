@@ -1,0 +1,288 @@
+/*
+ * Taxation phase — matches mockup § 2-1 (peon upload) and § 2-2 (momonty
+ * return). Both sub-modes share the same header + recipient pill + card
+ * canvas + CTA rhythm.
+ */
+
+.taxation {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 8px;
+}
+
+.tax-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.tax-header-emoji {
+  font-size: 20px;
+  line-height: 1;
+  padding-top: 2px;
+}
+.tax-header-text {
+  flex: 1;
+  min-width: 0;
+}
+.tax-title {
+  color: #f4f2ff;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+.tax-sub {
+  color: var(--text-4);
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+/* -------------------------- Recipient pill -------------------------- */
+
+.tax-recipient {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 14px;
+  border-radius: 13px;
+  background: rgba(242, 193, 78, 0.1);
+  border: 1px solid rgba(242, 193, 78, 0.3);
+}
+.tax-recipient.ret {
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.28);
+}
+.tax-recipient[data-tier="top-1"] {
+  background: rgba(242, 193, 78, 0.14);
+  border-color: rgba(242, 193, 78, 0.35);
+}
+.tax-recipient[data-tier="bottom-1"] {
+  background: rgba(138, 130, 152, 0.14);
+  border-color: rgba(138, 130, 152, 0.32);
+}
+.tax-recipient-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.tax-recipient-text {
+  color: #f8d98a;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.tax-recipient-text b {
+  color: #fff;
+  margin: 0 3px;
+}
+.tax-recipient-role {
+  color: var(--text-4);
+  font-weight: 500;
+  font-size: 10.5px;
+}
+
+/* -------------------------- Labels -------------------------- */
+
+.tax-label {
+  color: var(--text-5);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.tax-label b {
+  color: var(--accent-1);
+  font-family: var(--font-brand);
+  font-weight: 800;
+  margin: 0 2px;
+}
+.tax-hand-label {
+  color: var(--text-5);
+  font-size: 10px;
+  font-weight: 700;
+}
+.tax-hand-label b {
+  color: var(--text-2);
+  margin: 0 2px;
+}
+
+/* -------------------------- Auto-picked cards -------------------------- */
+
+.tax-auto-cards {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 4px 0;
+}
+.tax-picked-card {
+  width: 54px;
+  height: 76px;
+  border-radius: 11px;
+  background: linear-gradient(160deg, #fdfcff, #e7e2f5);
+  color: #c8912a;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px var(--accent-1), 0 8px 18px -6px var(--accent-glow);
+  position: relative;
+  animation: pick-in 0.4s var(--easing) both;
+}
+@keyframes pick-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) rotate(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.tax-picked-value {
+  line-height: 1;
+}
+
+/* -------------------------- Hand strip -------------------------- */
+
+.tax-hand-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
+  padding: 4px 0;
+}
+.tax-card {
+  width: 30px;
+  height: 42px;
+  border-radius: 7px;
+  background: #fff;
+  color: #2a2350;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 6px -3px #000;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: transform var(--dur-fast) var(--easing);
+}
+.tax-card[data-tone="royal"] {
+  color: var(--gold-4);
+}
+.tax-card[data-tone="wild"] {
+  background: linear-gradient(160deg, #2a2350, #1a1636);
+  border: 1px solid var(--brand-purple-2);
+  color: #e0b6ff;
+}
+.tax-card[data-selected="true"] {
+  background: linear-gradient(160deg, #fff7e6, #fdecc4);
+  box-shadow: 0 0 0 2px var(--accent-1), 0 5px 10px -3px var(--accent-glow);
+  transform: translateY(-5px);
+}
+.tax-card[data-picked="true"] {
+  background: linear-gradient(160deg, #fff7e6, #fdecc4);
+  box-shadow: 0 0 0 2px var(--accent-1), 0 3px 8px -3px var(--accent-glow);
+  opacity: 0.55;
+}
+.tax-card:disabled {
+  cursor: not-allowed;
+}
+
+/* -------------------------- Selected preview -------------------------- */
+
+.tax-selected-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #c9c2e0;
+  font-size: 11px;
+  font-weight: 700;
+}
+.tax-selected-mini {
+  display: flex;
+  gap: 5px;
+}
+.tax-mini-card {
+  width: 22px;
+  height: 30px;
+  border-radius: 5px;
+  background: #fff;
+  color: #8a8298;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tax-mini-card.wild {
+  background: linear-gradient(160deg, #2a2350, #1a1636);
+  border: 1px solid var(--brand-purple-2);
+  color: #e0b6ff;
+}
+
+/* -------------------------- Actions -------------------------- */
+
+.tax-actions {
+  margin-top: auto;
+  display: flex;
+  gap: 8px;
+  padding-top: 8px;
+}
+.tax-revolt {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(200, 85, 240, 0.4);
+  background: rgba(200, 85, 240, 0.12);
+  color: #e0b6ff;
+  font-weight: 800;
+  font-size: 13.5px;
+  cursor: pointer;
+  flex: none;
+  animation: revolt-pulse 1.6s infinite;
+}
+@keyframes revolt-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(200, 85, 240, 0.55); }
+  50% { box-shadow: 0 0 0 6px transparent; }
+}
+.tax-submit {
+  flex: 1;
+  padding: 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--brand-purple-1), var(--brand-purple-2));
+  color: #fff;
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 14.5px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 14px 26px -10px var(--brand-purple-glow);
+}
+.tax-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* -------------------------- Waiting state -------------------------- */
+
+.taxation.waiting {
+  justify-content: center;
+}
+.tax-waiting-note {
+  padding: 14px 16px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  color: var(--text-4);
+  font-size: 12px;
+  text-align: center;
+}
