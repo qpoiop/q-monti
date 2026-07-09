@@ -9,8 +9,10 @@ body,
 #root {
   margin: 0;
   padding: 0;
-  height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
   overscroll-behavior: none;
+  overflow: hidden;
 }
 html {
   /* Viewport-scaled root: 280px ref → clamp 320/small phone to 480/tablet.
@@ -26,11 +28,17 @@ body {
   color: var(--text-1);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+}
+#root {
+  height: 100dvh;
 }
 .route-swap {
   animation: m-fade-in var(--dur-med) var(--easing) both;
-  min-height: 100dvh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 button {
   font-family: inherit;

@@ -15,22 +15,24 @@
  */
 .stage {
   width: 100vw;
-  min-height: 100dvh;
+  height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: stretch;
   background: var(--surface-base);
+  overflow: hidden;
 }
 .screen-shell {
   flex: 1;
   width: 100%;
-  min-height: 100dvh;
+  height: 100%;
   max-width: 440px;
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
   box-shadow: 0 0 0 1px var(--glass-border-1);
+  min-height: 0;
 }
 .screen-content {
   flex: 1;
@@ -39,10 +41,14 @@
   flex-direction: column;
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
+  overflow: hidden;
 }
 @media (min-width: 900px) {
+  .stage {
+    align-items: center;
+  }
   .screen-shell {
-    min-height: min(880px, calc(100dvh - 32px));
+    height: min(880px, calc(100dvh - 32px));
     border-radius: 32px;
     margin: clamp(16px, 3vh, 40px) 0;
   }
