@@ -147,6 +147,9 @@ export interface MomontyState {
     uploadedCards: Record<string, Card[]>;
     revolutionUsed: boolean;
     greatRevolution: boolean;
+    // Log of completed transfers, populated as each side settles.
+    // Cleared at beginRound; used by the taxationComplete event.
+    completedTransfers: TaxTransfer[];
   };
   match: {
     targetRounds: number;
@@ -157,6 +160,13 @@ export interface MomontyState {
     // Only used during first round: seat -> draw result
     picks: Record<string, number>;
   };
+}
+
+export interface TaxTransfer {
+  direction: "upload" | "return";
+  fromSeatId: string;
+  toSeatId: string;
+  cards: Card[];
 }
 
 /* -------------------------- Action -------------------------- */
@@ -497,6 +507,7 @@ function beginRound(state: MomontyState, rng: Rng): void {
     uploadedCards: {},
     revolutionUsed: false,
     greatRevolution: false,
+    completedTransfers: [],
   };
 
   if (state.round === 1) {
@@ -569,6 +580,7 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
         uploadedCards: {},
         revolutionUsed: false,
         greatRevolution: false,
+        completedTransfers: [],
       },
       match: { targetRounds: config.targetRounds, completedRounds: 0 },
     };
@@ -642,7 +654,7 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
       delete state.taxation.pendingUploads[seatId];
       events.push({ type: "uploaded", actorSeatId: seatId, payload: { count: picked.length } });
       // If uploads done and returns done, move to PLAYING.
-      maybeStartPlaying(state);
+      maybeStartPlaying(state, events);
       return { state, events };
     }
 
@@ -664,12 +676,18 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
       }
       state.hands[target].push(...picked);
       delete state.taxation.pendingReturns[seatId];
+      state.taxation.completedTransfers.push({
+        direction: "return",
+        fromSeatId: seatId,
+        toSeatId: target,
+        cards: picked,
+      });
       events.push({
         type: "returned",
         actorSeatId: seatId,
         payload: { toSeatId: target, count: picked.length },
       });
-      maybeStartPlaying(state);
+      maybeStartPlaying(state, events);
       return { state, events };
     }
 
@@ -880,27 +898,33 @@ function endRound(state: MomontyState, rng: Rng, events: GameEvent[]): void {
 
 /* -------------------------- Helpers cont'd -------------------------- */
 
-function maybeStartPlaying(state: MomontyState): void {
+function maybeStartPlaying(state: MomontyState, events: GameEvent[]): void {
   if (Object.keys(state.taxation.pendingUploads).length > 0) return;
-  // Once uploads done, deliver to momontys and wait for their returns.
-  const uploaded = Object.values(state.taxation.uploadedCards).flat();
-  if (uploaded.length > 0) {
-    // Sort by rank strength: grand momonty gets 2, momonty gets 1.
-    const momontys = Object.entries(state.ranks)
-      .filter(([, r]) => r === "GRAND_MOMONTY" || r === "MOMONTY")
-      .sort(([, a], [, b]) => rankOrder(a) - rankOrder(b));
-    const sortedUploads = uploaded.sort((a, b) => (a.value ?? 99) - (b.value ?? 99));
-    let idx = 0;
-    for (const [seatId, r] of momontys) {
-      const need = r === "GRAND_MOMONTY" ? 2 : 1;
-      const gift = sortedUploads.slice(idx, idx + need);
-      idx += need;
-      state.hands[seatId].push(...gift);
+  // Once uploads done, pair uploads by rank: grand peon → grand momonty,
+  // peon → momonty. That mirrors the standard rule and makes the transfer
+  // trail readable (source→target 1:1 per peon).
+  if (Object.keys(state.taxation.uploadedCards).length > 0) {
+    for (const [peonSeat, cards] of Object.entries(state.taxation.uploadedCards)) {
+      const peonRank = state.ranks[peonSeat];
+      const targetRank = peonRank === "GRAND_PEON" ? "GRAND_MOMONTY" : "MOMONTY";
+      const target = Object.entries(state.ranks).find(([, r]) => r === targetRank)?.[0];
+      if (!target) continue;
+      state.hands[target].push(...cards);
+      state.taxation.completedTransfers.push({
+        direction: "upload",
+        fromSeatId: peonSeat,
+        toSeatId: target,
+        cards,
+      });
     }
     state.taxation.uploadedCards = {};
   }
   if (Object.keys(state.taxation.pendingReturns).length > 0) return;
-  // All done: begin play.
+  // All done: emit the summary event and begin play.
+  events.push({
+    type: "taxationComplete",
+    payload: { transfers: state.taxation.completedTransfers },
+  });
   state.phase = "PLAYING";
   state.currentTrick.leaderSeatId =
     Object.entries(state.ranks).find(([, r]) => r === "GRAND_MOMONTY")?.[0] ??
