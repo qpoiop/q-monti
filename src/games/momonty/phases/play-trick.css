@@ -1,0 +1,376 @@
+/*
+ * Play trick — matches 시안 § ③ 플레이.
+ *
+ * Composed of:
+ *   .play-header (gold turn pill)
+ *   .opp-strip (4 opponent cells)
+ *   .req-pill (current requirement, only when following)
+ *   .pile (empty state OR active box with top cards + actor)
+ *   .sel-pill (selected preview)
+ *   .hand-strip (grouped cards with valid/dim/wild tones)
+ *   .action-bar (패스 + gradient CTA)
+ */
+
+.play-trick {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 8px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* -------------------------- Header -------------------------- */
+
+.play-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 2px 2px;
+}
+.turn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-brand);
+  font-weight: 700;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+.turn-pill.on {
+  color: var(--accent-text-on);
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-3));
+  animation: m-turn 1.6s infinite;
+}
+.turn-pill.off {
+  background: var(--glass-3);
+  border: 1px solid var(--glass-border-2);
+  color: var(--text-5);
+}
+.turn-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: m-blink 1s infinite;
+}
+
+/* -------------------------- Opponents -------------------------- */
+
+.opp-strip {
+  display: flex;
+  gap: 5px;
+}
+.opp-cell {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  padding: 6px 4px;
+  border-radius: 9px;
+  background: var(--glass-2);
+  border: 1px solid var(--glass-border-1);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.opp-cell[data-turn="true"] {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+.opp-cell[data-passed="true"] {
+  opacity: 0.45;
+}
+.opp-name {
+  font-size: 9.5px;
+  color: var(--text-4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.opp-back {
+  font-family: var(--font-brand);
+  font-size: 11px;
+  color: var(--accent-1);
+  font-weight: 700;
+}
+
+/* -------------------------- Requirement pill -------------------------- */
+
+.req-pill {
+  align-self: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--accent-3);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+.req-pill b {
+  font-family: var(--font-brand);
+  font-weight: 800;
+  color: #fff;
+  margin: 0 2px;
+}
+
+/* -------------------------- Pile -------------------------- */
+
+.pile {
+  border-radius: 16px;
+  background: var(--glass-1);
+  border: 1px solid var(--glass-border-2);
+  padding: 12px;
+}
+.pile-empty {
+  flex: 1;
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1.5px dashed var(--accent-border);
+  background: var(--glass-1);
+}
+.pile-empty-icon {
+  font-size: 26px;
+  opacity: 0.55;
+}
+.pile-empty-title {
+  color: var(--accent-1);
+  font-family: var(--font-brand);
+  font-size: 12px;
+  font-weight: 800;
+}
+.pile-empty-hint {
+  color: var(--text-5);
+  font-size: 10.5px;
+}
+.pile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pile-head-label {
+  font-family: var(--font-brand);
+  font-weight: 700;
+  font-size: 9.5px;
+  color: var(--text-5);
+  letter-spacing: 0.06em;
+}
+.pile-head-actor {
+  color: var(--accent-1);
+  font-size: 10px;
+}
+.pile-cards {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+.pile-card {
+  width: 40px;
+  height: 56px;
+  border-radius: 8px;
+  background: linear-gradient(160deg, #fdfcff, #e7e2f5);
+  color: #2a2350;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 12px -4px #000;
+}
+.pile-card.wild {
+  background: linear-gradient(160deg, #2a2350, #1a1636);
+  border: 1.5px solid var(--brand-purple-2);
+  color: #e0b6ff;
+}
+
+/* -------------------------- Selected preview -------------------------- */
+
+.sel-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 11px;
+  font-weight: 700;
+  font-size: 11px;
+}
+.sel-pill b {
+  font-family: var(--font-brand);
+  font-weight: 800;
+  color: inherit;
+  margin: 0 1px;
+}
+.sel-good {
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  color: var(--pos-1);
+}
+.sel-bad {
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: var(--neg-2);
+}
+.sel-wild {
+  background: rgba(200, 85, 240, 0.14);
+  border: 1px solid rgba(200, 85, 240, 0.35);
+  color: #e0b6ff;
+}
+.sel-mini {
+  display: flex;
+  gap: 3px;
+}
+.sel-mini-card {
+  width: 18px;
+  height: 24px;
+  border-radius: 4px;
+  background: #fff;
+  color: #2a2350;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sel-mini-card.wild {
+  background: linear-gradient(160deg, #2a2350, #1a1636);
+  border: 1px solid var(--brand-purple-2);
+  color: #e0b6ff;
+}
+
+/* -------------------------- Hand -------------------------- */
+
+.hand-label {
+  color: var(--text-5);
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.hand-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 2px 0 4px;
+}
+.hand-card {
+  width: 26px;
+  height: 36px;
+  border-radius: 6px;
+  background: #fff;
+  color: #2a2350;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 6px -3px #000;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: transform var(--dur-fast) var(--easing);
+  flex: none;
+}
+.hand-card[data-tone="royal"] {
+  color: var(--gold-4);
+}
+.hand-card[data-tone="wild"] {
+  background: linear-gradient(160deg, #2a2350, #1a1636);
+  border: 1px solid var(--brand-purple-2);
+  color: #e0b6ff;
+}
+.hand-card[data-selected="true"] {
+  background: linear-gradient(160deg, #fff7e6, #fdecc4);
+  box-shadow: 0 0 0 2px var(--accent-1), 0 4px 8px -3px var(--accent-glow);
+  transform: translateY(-4px);
+}
+.hand-card[data-tone="wild"][data-selected="true"] {
+  background: linear-gradient(160deg, #3a2f60, #241d44);
+  box-shadow: 0 0 0 2px var(--brand-purple-2), 0 4px 8px -3px rgba(200, 85, 240, 0.5);
+}
+.hand-card[data-disabled="true"] {
+  background: #8f8aa8;
+  color: #4b4670;
+  opacity: 0.45;
+  box-shadow: none;
+}
+.mini-crown {
+  position: absolute;
+  top: -6px;
+  font-size: 10px;
+  filter: drop-shadow(0 0 3px var(--accent-glow));
+}
+
+/* -------------------------- Action bar -------------------------- */
+
+.action-bar {
+  margin-top: auto;
+  display: flex;
+  gap: 8px;
+  padding-top: 8px;
+}
+.pass-btn {
+  flex: none;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--glass-3);
+  border: 1px solid var(--glass-border-3);
+  color: #fda4af;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  min-width: 82px;
+}
+.pass-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.cta-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  color: #fff;
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 13.5px;
+  text-align: center;
+  border: none;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--easing);
+}
+.cta-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.cta-btn:not(:disabled):active {
+  transform: scale(0.98);
+}
+.cta-gold {
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: var(--accent-text-on);
+  box-shadow: 0 12px 22px -10px var(--accent-glow);
+}
+.cta-green {
+  background: linear-gradient(135deg, #34d399, #10b981);
+  color: #04241a;
+  box-shadow: 0 12px 22px -10px rgba(52, 211, 153, 0.6);
+}
+.cta-purple {
+  background: linear-gradient(135deg, var(--brand-purple-2), var(--brand-purple-1));
+  color: #fff;
+  box-shadow: 0 12px 22px -10px rgba(200, 85, 240, 0.6);
+}
+.cta-muted {
+  background: var(--glass-3);
+  color: var(--text-5);
+  border: 1px solid var(--glass-border-2);
+}
