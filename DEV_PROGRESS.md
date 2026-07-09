@@ -25,6 +25,13 @@ Snapshot of what's shipped, what's live, and what's left. Written for context re
 
 ## Shipped (in reverse-chron)
 
+- **Lobby seat row nickname ellipsis**: long display names shrink instead of pushing the status pill offscreen.
+- **Sort button label**: reads "↑ 낮은 순" / "↓ 높은 순" / "≡ 묶음" instead of a bare glyph.
+- **Selected-hand highlight**: cream→gold gradient + gold outline ring; wild variant purple.
+- **Sel-slot reserved 44px + child stretch**: layout no longer shifts when the sel-pill mounts.
+- **Opp-cell name truncation**: block-level ellipsis for long nicknames on the opponent strip.
+- **Engine pass-stall guard**: nextSeat can't wedge forever when the trick leader is out; endRound also fires from the pass branch.
+- **Bot handoff button (`▶ 봇에게 넘기기`)**: runs the bot policy for every seat until the round changes.
 - **Sel-preview refactor**: shape (`N×M` / `스트레이트 N장`), wild badge, status text as separate spans.
 - **Rules book cleanup**: chapter tabs = inline pill chips, flow steps 2-col grid, combos/kv converted to explicit grids with `keep-all`.
 - **Join keypad**: removed `prompt()` alpha input; added inline abc/123 toggle. Code cells flex to full row width with aspect-ratio 3:4.
@@ -41,11 +48,10 @@ Snapshot of what's shipped, what's live, and what's left. Written for context re
 
 ## Known TODO
 
-- Hand-card selected highlight — spot-check colour vs. mockup §3-3.
-- `runBotForHuman` isn't driving multi-round transitions all the way to MATCH_END in every case; debug why (likely a null `botAction` return in a specific state I haven't traced).
+- Round 2+ tax-transfer overlay occasionally shows a single upload chip where the rank should be uploading two (likely a display-column truncation, low priority).
 - Connection screens §6-x — copy verified; needs visual pass in a throttled/offline browser.
-- Long-nickname handling on seat rows — already ellipsised in test picker but check `SeatRow` in Lobby and OpponentStrip.
 - Responsive sweep is partial — `hand-card`, `pile-card`, `code-cell` are on clamp; remaining phase views still use fixed px in several places.
+- Test-mode 봇 handoff drives round → round transitions; MATCH_END has not been eyeballed end-to-end yet.
 
 ## Verification recipe (test mode)
 
