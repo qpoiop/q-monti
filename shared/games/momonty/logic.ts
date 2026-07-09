@@ -698,7 +698,11 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
           true
         );
       }
-      events.push({ type: "revolution", actorSeatId: seatId });
+      events.push({
+        type: "revolution",
+        actorSeatId: seatId,
+        payload: { great: state.taxation.greatRevolution },
+      });
       state.phase = "PLAYING";
       state.currentTrick.leaderSeatId =
         Object.entries(state.ranks).find(([, r]) => r === "GRAND_MOMONTY")?.[0] ??

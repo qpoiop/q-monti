@@ -1,0 +1,100 @@
+/*
+ * Revolution broadcast — mocks §2-3.
+ * Full-frame scrim, glowing purple gradient, jester cards below.
+ */
+
+.revolution-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 350;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(80% 60% at 50% 40%, rgba(200, 85, 240, 0.36), transparent 65%),
+    linear-gradient(165deg, rgba(26, 13, 44, 0.94), rgba(42, 17, 64, 0.98));
+  backdrop-filter: blur(10px);
+  animation: revolt-scrim 2.6s var(--easing);
+}
+.revolution-scrim.great {
+  background:
+    radial-gradient(80% 60% at 50% 40%, rgba(242, 193, 78, 0.28), transparent 55%),
+    radial-gradient(80% 60% at 50% 40%, rgba(200, 85, 240, 0.32), transparent 65%),
+    linear-gradient(165deg, rgba(20, 8, 38, 0.98), rgba(58, 20, 82, 0.98));
+}
+.revolution-card {
+  text-align: center;
+  animation: revolt-card 2.6s var(--easing);
+  color: #fff;
+  padding: 0 30px;
+}
+.revolution-emoji {
+  font-size: 68px;
+  filter: drop-shadow(0 12px 30px rgba(200, 85, 240, 0.6));
+  animation: revolt-shake 0.5s var(--easing);
+}
+.revolution-title {
+  font-family: var(--font-brand);
+  font-weight: 900;
+  font-size: 40px;
+  letter-spacing: 0.02em;
+  margin-top: 12px;
+  background: linear-gradient(135deg, #ffffff, #e0b6ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.revolution-scrim.great .revolution-title {
+  background: linear-gradient(135deg, var(--accent-1), #e0b6ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.revolution-sub {
+  color: #e0b6ff;
+  font-size: 14px;
+  margin-top: 8px;
+  line-height: 1.6;
+}
+.revolution-jesters {
+  margin-top: 22px;
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+}
+.rev-jester {
+  width: 64px;
+  height: 90px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, #2a2350, #1a1636);
+  border: 1.5px solid var(--brand-purple-2);
+  box-shadow: 0 0 18px rgba(200, 85, 240, 0.55);
+  color: #e0b6ff;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-7deg);
+}
+.rev-jester:last-child {
+  transform: rotate(7deg);
+}
+@keyframes revolt-scrim {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes revolt-card {
+  0% { opacity: 0; transform: translateY(20px); }
+  15% { opacity: 1; transform: none; }
+  85% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-8px); }
+}
+@keyframes revolt-shake {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-10deg); }
+  50% { transform: rotate(6deg); }
+  75% { transform: rotate(-3deg); }
+}

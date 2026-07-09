@@ -13,6 +13,7 @@ import { InstallLayer } from "./screens/InstallLayer";
 import { ExitConfirm } from "./screens/ExitConfirm";
 import { RulesSheet } from "./screens/RulesSheet";
 import { EventFx } from "./design/effects/EventFx";
+import { RevolutionOverlay } from "./games/momonty/phases/RevolutionOverlay";
 import { initRouter } from "./nav/router";
 import { registerSW } from "./pwa/register";
 
@@ -49,6 +50,7 @@ export function App() {
         {body}
       </div>
       <EventFx />
+      <RevolutionOverlay />
       <InstallLayer />
       <ConnectionOverlay />
       <ExitConfirm />
