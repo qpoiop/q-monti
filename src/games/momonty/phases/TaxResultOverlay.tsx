@@ -55,7 +55,7 @@ export function TaxResultOverlay() {
               <div className="tax-result-section-label">평민 → 모몬티 상납</div>
               <div className="tax-transfer-list">
                 {uploads.map((t, i) => (
-                  <TransferRow key={`u-${i}`} t={t} nameOf={nameOf} ranks={ranks} />
+                  <TransferRow key={`u-${i}`} t={t} nameOf={nameOf} />
                 ))}
               </div>
             </div>
@@ -65,7 +65,7 @@ export function TaxResultOverlay() {
               <div className="tax-result-section-label">모몬티 → 평민 하사</div>
               <div className="tax-transfer-list">
                 {returns.map((t, i) => (
-                  <TransferRow key={`r-${i}`} t={t} nameOf={nameOf} ranks={ranks} />
+                  <TransferRow key={`r-${i}`} t={t} nameOf={nameOf} />
                 ))}
               </div>
             </div>
@@ -86,26 +86,25 @@ export function TaxResultOverlay() {
 function TransferRow({
   t,
   nameOf,
-  ranks,
 }: {
   t: TaxTransfer;
   nameOf: (id: string) => string;
   ranks?: Record<string, string>;
 }) {
+  // Ranks were previously shown next to each name but this is unreliable
+  // during round transitions — the transfer is recorded with the ranks
+  // at settlement time while the view carries whatever ranks were rolled
+  // into the next round's beginRound(). Names + cards are enough here;
+  // the section header already tells the reader which direction the
+  // transfer travels.
   return (
     <div className="tax-transfer-row">
       <span className="tax-side">
         <span className="tax-name">{nameOf(t.fromSeatId)}</span>
-        {ranks?.[t.fromSeatId] ? (
-          <span className="tax-rank">{roleShort(ranks[t.fromSeatId])}</span>
-        ) : null}
       </span>
       <span className="tax-arrow">→</span>
       <span className="tax-side">
         <span className="tax-name">{nameOf(t.toSeatId)}</span>
-        {ranks?.[t.toSeatId] ? (
-          <span className="tax-rank">{roleShort(ranks[t.toSeatId])}</span>
-        ) : null}
       </span>
       <span className="tax-cards">
         {t.cards.map((c, i) => (
@@ -116,19 +115,4 @@ function TransferRow({
       </span>
     </div>
   );
-}
-
-function roleShort(rank: string): string {
-  switch (rank) {
-    case "GRAND_MOMONTY":
-      return "대모몬티";
-    case "MOMONTY":
-      return "모몬티";
-    case "PEON":
-      return "평민";
-    case "GRAND_PEON":
-      return "대평민";
-    default:
-      return "상인";
-  }
 }

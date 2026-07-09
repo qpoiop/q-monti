@@ -762,7 +762,8 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
               (state.hands[s] ?? []).length > 0 &&
               !state.currentTrick.passSeatIds.includes(s)
           );
-          if (leaderOut && eligible.length === 0 && state.currentTrick.form.kind !== "none") {
+          const formActive = (state.currentTrick.form as TrickForm).kind !== "none";
+          if (leaderOut && eligible.length === 0 && formActive) {
             clearTrick(state);
             events.push({ type: "trickClear", actorSeatId: leader });
           }
