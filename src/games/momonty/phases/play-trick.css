@@ -206,6 +206,66 @@
   margin: 0 2px;
 }
 
+/* -------------------------- Wild build hint (§3-3) -------------------------- */
+
+.wild-hint {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(200, 85, 240, 0.15), rgba(120, 55, 200, 0.08));
+  border: 1px solid rgba(200, 85, 240, 0.32);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wild-hint-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.wild-hint-eyebrow {
+  color: #e0b6ff;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+}
+.wild-hint-sub {
+  color: var(--text-4);
+  font-size: 9.5px;
+  font-weight: 700;
+}
+.wild-hint-list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.wild-hint-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(200, 85, 240, 0.16);
+  border: 1px solid rgba(200, 85, 240, 0.36);
+  color: #fff;
+  cursor: pointer;
+  font-family: var(--font-brand);
+  font-weight: 700;
+  font-size: 11px;
+}
+.wild-hint-chip:active {
+  transform: scale(0.97);
+}
+.wild-hint-lead {
+  color: #fff;
+  font-weight: 800;
+}
+.wild-hint-tail {
+  color: #e0b6ff;
+  font-size: 10px;
+}
+
 /* -------------------------- Pile -------------------------- */
 
 .pile-empty {

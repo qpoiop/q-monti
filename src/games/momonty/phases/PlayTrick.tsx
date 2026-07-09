@@ -107,6 +107,72 @@ function checkAgainstForm(
  * form. Jesters always qualify, numbered cards must be strictly lower
  * than the target value.
  */
+interface WildTip {
+  value: number;
+  size: number;
+  baseCount: number;
+  wildCount: number;
+  cardIds: string[];
+}
+
+function countJesters(hand: MCard[]): number {
+  return hand.filter((c) => c.value === null).length;
+}
+
+/**
+ * Suggests jester-backed plays. Only fires when jesters are in hand.
+ * Leading: recommends the LARGEST feasible set per value (padding with
+ *   jesters up to 4-of-a-kind). Ranked by value ascending — cheaper
+ *   plays first, so the tip drives seats to play their weaker cards.
+ * Following: only surfaces sets that legally beat the current form.
+ *
+ * Only top 3 tips returned; excessive suggestions clutter the frame.
+ */
+function computeWildTips(hand: MCard[], form: TrickForm, great: boolean): WildTip[] {
+  const jesters = hand.filter((c) => c.value === null);
+  if (jesters.length === 0) return [];
+  // Straights are complex; skip for now — set-based suggestions are the
+  // dominant case in play, and the wild banner should stay compact.
+  if (form.kind === "straight") return [];
+  const targetSize =
+    form.kind === "single" ? 1 :
+    form.kind === "pair" ? 2 :
+    form.kind === "triple" ? 3 :
+    form.kind === "quad" ? 4 : 0;
+  const threshold = form.kind === "none" ? null : ("value" in form ? form.value : null);
+  const byValue = new Map<number, MCard[]>();
+  for (const c of hand) {
+    if (c.value == null) continue;
+    const arr = byValue.get(c.value) ?? [];
+    arr.push(c);
+    byValue.set(c.value, arr);
+  }
+  const tips: WildTip[] = [];
+  for (const [v, cards] of byValue.entries()) {
+    if (threshold != null) {
+      const beats = great ? v > threshold : v < threshold;
+      if (!beats) continue;
+    }
+    const cap = form.kind === "none" ? 4 : targetSize;
+    const maxWith = Math.min(cap, cards.length + jesters.length);
+    if (maxWith < 2) continue; // singletons aren't a "wild build" tip
+    const wildNeeded = Math.max(0, maxWith - cards.length);
+    if (wildNeeded === 0) continue; // no jester used, not a wild tip
+    if (wildNeeded > jesters.length) continue;
+    tips.push({
+      value: v,
+      size: maxWith,
+      baseCount: maxWith - wildNeeded,
+      wildCount: wildNeeded,
+      cardIds: [...cards.slice(0, maxWith - wildNeeded), ...jesters.slice(0, wildNeeded)].map(
+        (c) => c.id
+      ),
+    });
+  }
+  tips.sort((a, b) => b.size - a.size || a.value - b.value);
+  return tips.slice(0, 3);
+}
+
 function canFollowWithCard(card: MCard, form: TrickForm): boolean {
   if (form.kind === "none") return true;
   if (card.value === null) return true;
@@ -161,6 +227,10 @@ export function PlayTrick({ view }: { view: MomontyView }) {
   const cls = classify(selectedCards);
   const formError = cls ? checkAgainstForm(view.currentTrick.form, cls, view.taxation.greatRevolution) : null;
   const hasWild = selectedCards.some((c) => c.value === null);
+  const wildTips = useMemo(
+    () => (myTurn ? computeWildTips(hand, view.currentTrick.form, view.taxation.greatRevolution) : []),
+    [hand, view.currentTrick.form, view.taxation.greatRevolution, myTurn]
+  );
   const submitOk =
     myTurn &&
     selectedCards.length > 0 &&
@@ -265,6 +335,30 @@ export function PlayTrick({ view }: { view: MomontyView }) {
       <OpponentStrip view={view} />
 
       {requirementText ? <div className="req-pill">{requirementText}</div> : null}
+
+      {wildTips.length > 0 ? (
+        <div className="wild-hint">
+          <div className="wild-hint-head">
+            <span className="wild-hint-eyebrow">★ 와일드 모드</span>
+            <span className="wild-hint-sub">광대 {countJesters(hand)}장 · 조합 힌트</span>
+          </div>
+          <div className="wild-hint-list">
+            {wildTips.map((t, i) => (
+              <button
+                key={i}
+                type="button"
+                className="wild-hint-chip"
+                onClick={() => setSelected(t.cardIds)}
+              >
+                <span className="wild-hint-lead">{t.value}×{t.size}</span>
+                <span className="wild-hint-tail">
+                  {t.baseCount}장 + ★{t.wildCount}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {isLeading ? <EmptyPile /> : <PileBox view={view} seatNames={seatNames} />}
 
