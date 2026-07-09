@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#241a10" />
+      <stop offset="1" stop-color="#1a1330" />
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="12%" r="60%">
+      <stop offset="0" stop-color="#f2c14e" stop-opacity="0.5" />
+      <stop offset="1" stop-color="#f2c14e" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#e7e2f5" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" ry="112" fill="url(#bg)" />
+  <rect width="512" height="512" rx="112" ry="112" fill="url(#glow)" />
+  <g transform="translate(256 260)">
+    <g transform="translate(-118 4)"><rect x="-52" y="-84" width="120" height="188" rx="22" fill="url(#card)" transform="rotate(-14)" /></g>
+    <g transform="translate(116 4)"><rect x="-68" y="-84" width="120" height="188" rx="22" fill="url(#card)" transform="rotate(14)" /></g>
+    <g transform="translate(0 -20)">
+      <rect x="-72" y="-104" width="144" height="208" rx="24" fill="url(#card)" stroke="#f2c14e" stroke-width="8" />
+      <text x="0" y="42" text-anchor="middle" font-family="Outfit, sans-serif" font-weight="900" font-size="120" fill="#c8912a">1</text>
+      <text x="0" y="-62" text-anchor="middle" font-size="48">👑</text>
+    </g>
+  </g>
+  <text x="256" y="480" text-anchor="middle" font-family="Outfit, sans-serif" font-weight="900" font-size="52" fill="#ffffff">MOMONTI</text>
+</svg>

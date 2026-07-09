@@ -1,0 +1,23 @@
+{
+  "name": "모몬티 · Momonti",
+  "short_name": "모몬티",
+  "description": "낮은 숫자가 왕이 되는 서열 셰딩 대전",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#120e26",
+  "theme_color": "#120e26",
+  "lang": "ko",
+  "dir": "ltr",
+  "categories": ["games", "board"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
