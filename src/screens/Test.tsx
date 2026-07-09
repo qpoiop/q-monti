@@ -342,7 +342,7 @@ function TestPlay() {
     <DesktopStage>
       <PhoneFrame gradient="radial-gradient(90% 40% at 50% 0%, rgba(242,193,78,.16), transparent 60%)">
         <ScreenHeader
-          title={`R${view.round} · ${spec.label}`}
+          title={`R${view.round}/${view.match.targetRounds} · ${spec.label}`}
           onBack={() => setConfirmLeave(true)}
           right={
             <HeaderActions>
