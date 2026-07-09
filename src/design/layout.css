@@ -4,7 +4,7 @@
  * language stays consistent and diffs stay legible.
  */
 
-/* -------------------------- Desktop stage -------------------------- */
+/* -------------------------- Phone frame -------------------------- */
 
 .desktop-stage {
   height: 100dvh;
@@ -19,13 +19,76 @@
   align-items: center;
   justify-content: center;
 }
-@media (max-width: 640px) {
+
+.phone-outer {
+  width: 280px;
+  padding: 10px;
+  background: var(--surface-frame);
+  border-radius: 40px;
+  box-shadow: var(--shadow-frame), inset 0 0 0 2px var(--surface-frame-ring);
+  flex: none;
+}
+.phone-inner {
+  position: relative;
+  width: 260px;
+  height: 600px;
+  border-radius: 32px;
+  overflow: hidden;
+}
+.phone-status {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  font-family: var(--font-brand);
+  z-index: 30;
+}
+.phone-content {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+ * On any viewport too small to natively hold the 280×620 mockup, the
+ * frame is scaled to fit. `min(vw / 300, vh / 640)` keeps the aspect
+ * ratio and adds a small safety margin so the visual never bleeds off.
+ * Because CSS transform: scale doesn't affect the logical layout, the
+ * outer flex container still centres on the 280×620 logical box while
+ * the visual frame fills the viewport.
+ *
+ * We match on the union of `max-width: 900px` (narrow browsers, small
+ * tablets, phones) and any portrait viewport that would otherwise
+ * leave the mockup dwarfed. Desktop-sized windows fall through at
+ * scale=1 without wasted paint.
+ */
+@media (max-width: 900px), (orientation: portrait) {
   .desktop-stage {
-    align-items: flex-start;
+    align-items: center;
+    padding: 0;
   }
-  .desktop-stage-inner {
-    width: 100vw;
-    min-height: 100dvh;
+  .phone-outer {
+    transform-origin: center;
+    transform: scale(min(calc(100vw / 300), calc(100dvh / 640)));
+  }
+}
+/* Never scale up beyond native size on wide desktops. */
+@media (min-width: 1200px) and (orientation: landscape) {
+  .phone-outer {
+    transform: none;
   }
 }
 
