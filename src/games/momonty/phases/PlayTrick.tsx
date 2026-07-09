@@ -10,24 +10,22 @@ import "./play-trick.css";
 /**
  * Phase — PLAYING.
  *
- * Ported from the 모몬티 시안 (design spec, section ③ 플레이):
- *
- *   Turn header · Opponent strip · Requirement pill (when following) ·
- *   Pile box (or empty state) · Selected preview · Grouped hand strip ·
- *   Pass / 내기 action bar.
- *
- * The selection logic classifies the picked cards into a legal
- * Momonty combination and validates it against the current trick form
- * so the CTA label + tone reflect exactly what will be sent to the
- * server.
+ * Layout matches 시안 § 3 exactly:
+ *   Header  — gold pulsing "내 리드 차례" / "내 차례" pill  · timer ring
+ *   Opp strip — 3-4 opponent cells with name + 🂠N
+ *   Pile — empty state (dashed) OR active box with top cards + actor
+ *   Requirement pill — "현재 세트 3장 · 10보다 낮은 3장만 가능"
+ *   Selection preview — "선택: 10 ×3" + mini cards on right
+ *   Hand — grouped same-value cards with tone-per-value + gold selection glow
+ *   Action bar — 정렬 (lead) / 패스 (follow) + gradient CTA
  */
 
 interface Classification {
   kind: "none" | "single" | "pair" | "triple" | "quad" | "straight";
-  value: number; // effective value (for straights: start value)
-  size: number; // total cards
+  value: number;
+  size: number;
   jesters: number;
-  wildBase?: number; // representative numeric value used to declare wild
+  wildBase?: number;
   cards: MCard[];
 }
 
@@ -35,14 +33,11 @@ function classify(cards: MCard[]): Classification | null {
   if (cards.length === 0)
     return { kind: "none", value: 0, size: 0, jesters: 0, cards: [] };
   const jesters = cards.filter((c) => c.value === null);
-  const numbered = cards.filter((c) => c.value != null) as (MCard & {
-    value: number;
-  })[];
-  if (numbered.length === 0) return null; // pure jesters need a target — not classifiable client-side
+  const numbered = cards.filter((c) => c.value != null) as (MCard & { value: number })[];
+  if (numbered.length === 0) return null;
   const values = numbered.map((c) => c.value).sort((a, b) => a - b);
   const uniq = new Set(values);
   const base = values[0];
-  // Set (single/pair/triple/quad) — all numbered same value, jesters fill.
   if (uniq.size === 1 && cards.length <= 4) {
     const kind =
       cards.length === 1
@@ -61,7 +56,6 @@ function classify(cards: MCard[]): Classification | null {
       cards,
     };
   }
-  // Straight (length >= 3, contiguous with jesters filling gaps).
   if (cards.length >= 3) {
     const len = cards.length;
     for (let start = Math.max(1, Math.max(...values) - len + 1); start <= base; start++) {
@@ -101,24 +95,16 @@ function beats(current: TrickForm, cand: Classification, great: boolean): boolea
 }
 
 function isValidCardInForm(card: MCard, form: TrickForm): boolean {
-  // Which cards CAN help form a legal follow. Used to dim invalid cards.
   if (form.kind === "none") return true;
-  if (card.value === null) return true; // jester always potentially useful
-  const targetValue = "value" in form ? form.value : form.kind === "straight" ? form.startValue : 0;
-  return card.value < targetValue; // lower value can potentially form set/straight beating
+  if (card.value === null) return true;
+  const targetValue =
+    "value" in form ? form.value : form.kind === "straight" ? form.startValue : 0;
+  return card.value < targetValue;
 }
-
-const FORM_LABEL: Record<Classification["kind"], string> = {
-  none: "리드",
-  single: "싱글",
-  pair: "페어",
-  triple: "트리플",
-  quad: "쿼드",
-  straight: "스트레이트",
-};
 
 export function PlayTrick({ view }: { view: MomontyView }) {
   const [selected, setSelected] = useState<string[]>([]);
+  const [sortMode, setSortMode] = useState<"value" | "group">("group");
   const hand = view.myHand ?? [];
   const myTurn = view.currentSeatId === view.mySeatId;
   const isLeading = view.currentTrick.form.kind === "none";
@@ -151,21 +137,22 @@ export function PlayTrick({ view }: { view: MomontyView }) {
         straightLength: cls.kind === "straight" ? cls.size : undefined,
       },
     });
-    // Toast so users get instant feedback for their action.
-    import("@web/state/store").then(({ getState }) => {
-      const label = hasWild
-        ? `${cls.value} ×${cls.size} (★ 와일드) ${isLeading ? "리드" : "내기"} 완료`
-        : `${cls.value} ×${cls.size} ${isLeading ? "리드" : "내기"} 완료`;
-      window.dispatchEvent(new CustomEvent("momonti:toast", { detail: label }));
-    });
+    const label = hasWild
+      ? `${cls.value} ×${cls.size} (★ 와일드) ${isLeading ? "리드" : "내기"} 완료`
+      : `${cls.value} ×${cls.size} ${isLeading ? "리드" : "내기"} 완료`;
+    window.dispatchEvent(new CustomEvent("momonti:toast", { detail: label }));
     setSelected([]);
   };
 
-  const requirementPill = (() => {
+  const requirementText = (() => {
     const f = view.currentTrick.form;
     if (f.kind === "none") return null;
     if (f.kind === "straight") {
-      return `현재 스트레이트 ${f.length}장 · ${f.startValue}보다 낮은 스트레이트 필요`;
+      return (
+        <>
+          현재 스트레이트 <b>{f.length}장</b> · <b>{f.startValue}</b>보다 낮은 스트레이트 필요
+        </>
+      );
     }
     const size = f.kind === "single" ? 1 : f.kind === "pair" ? 2 : f.kind === "triple" ? 3 : 4;
     return (
@@ -177,16 +164,16 @@ export function PlayTrick({ view }: { view: MomontyView }) {
 
   const ctaLabel = (() => {
     if (!myTurn) {
-      const currentActor = view.currentSeatId ? seatNames[view.currentSeatId] ?? view.currentSeatId : "";
-      return `${currentActor} 차례 대기…`;
+      const actor = view.currentSeatId ? seatNames[view.currentSeatId] ?? view.currentSeatId : "";
+      return `${actor} 차례 대기…`;
     }
-    if (selectedCards.length === 0) return isLeading ? "카드 선택" : "카드 선택 또는 패스";
+    if (selectedCards.length === 0) return isLeading ? "카드를 골라 리드" : "카드 선택 또는 패스";
     if (!cls) return "낼 수 없는 조합";
     if (!isLeading && !canBeat) return `${cls.value} ×${cls.size} · 더 낮음`;
-    const suffix = isLeading ? "리드" : "내기";
+    const suffix = isLeading ? "리드 ▶" : "내기 ▶";
     return hasWild
-      ? `${cls.value} ×${cls.size} (★와일드) ${suffix} ▶`
-      : `${cls.value} ×${cls.size} ${suffix} ▶`;
+      ? `${cls.value} ×${cls.size} (★와일드) ${suffix}`
+      : `${cls.value} ×${cls.size} ${suffix}`;
   })();
 
   const ctaTone: "gold" | "green" | "purple" | "muted" = !myTurn
@@ -205,43 +192,54 @@ export function PlayTrick({ view }: { view: MomontyView }) {
 
       <OpponentStrip view={view} />
 
-      {requirementPill ? <div className="req-pill">{requirementPill}</div> : null}
+      {requirementText ? <div className="req-pill">{requirementText}</div> : null}
 
       {isLeading ? <EmptyPile /> : <PileBox view={view} seatNames={seatNames} />}
 
       {selectedCards.length > 0 && cls ? (
-        <SelectedPreview
-          cls={cls}
-          canBeat={isLeading || canBeat}
-          hasWild={hasWild}
-        />
+        <SelectedPreview cls={cls} canBeat={isLeading || canBeat} hasWild={hasWild} />
       ) : null}
 
-      <div className="hand-label">
-        내 손패 {hand.length}장 · 같은 숫자끼리 묶임
+      <div className="hand-header">
+        <span className="hand-label">
+          내 손패 <b>{hand.length}장</b> · 같은 숫자끼리 묶임
+        </span>
       </div>
       <HandStrip
         hand={hand}
         selected={selected}
         form={view.currentTrick.form}
         onToggle={toggle}
+        sortMode={sortMode}
       />
 
       <div className="action-bar">
-        <button
-          type="button"
-          className="pass-btn"
-          disabled={!myTurn || !canPass}
-          onClick={() => {
-            setSelected([]);
-            send({ t: "action", action: { t: "pass" } });
-            window.dispatchEvent(
-              new CustomEvent("momonti:toast", { detail: "패스했어요 · 다음 사람 차례" })
-            );
-          }}
-        >
-          패스
-        </button>
+        {isLeading ? (
+          <button
+            type="button"
+            className="side-btn"
+            onClick={() =>
+              setSortMode((m) => (m === "group" ? "value" : "group"))
+            }
+          >
+            정렬
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="pass-btn"
+            disabled={!myTurn || !canPass}
+            onClick={() => {
+              setSelected([]);
+              send({ t: "action", action: { t: "pass" } });
+              window.dispatchEvent(
+                new CustomEvent("momonti:toast", { detail: "패스했어요 · 다음 사람 차례" })
+              );
+            }}
+          >
+            패스
+          </button>
+        )}
         <button
           type="button"
           className={`cta-btn cta-${ctaTone}`}
@@ -264,6 +262,12 @@ function PlayHeader({ isLeading, myTurn }: { isLeading: boolean; myTurn: boolean
         {myTurn ? <span className="turn-dot" /> : null}
         {myTurn ? (isLeading ? "내 리드 차례" : "내 차례") : "상대 차례"}
       </span>
+      <div className="timer-ring">
+        <div className="timer-ring-inner">
+          <span className="timer-value">15</span>
+          <span className="timer-unit">s</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -284,7 +288,12 @@ function OpponentStrip({ view }: { view: MomontyView }) {
             data-passed={passed ? "true" : "false"}
           >
             <div className="opp-name">{names[s] ?? s.slice(-2)}</div>
-            <div className="opp-back">🂠{view.handCounts[s] ?? 0}</div>
+            <div className="opp-count">
+              <span className="opp-back-icon" aria-hidden>
+                🂠
+              </span>
+              {view.handCounts[s] ?? 0}
+            </div>
           </div>
         );
       })}
@@ -295,7 +304,9 @@ function OpponentStrip({ view }: { view: MomontyView }) {
 function EmptyPile() {
   return (
     <div className="pile pile-empty">
-      <span className="pile-empty-icon">🂠</span>
+      <span className="pile-empty-icon" aria-hidden>
+        🂠
+      </span>
       <span className="pile-empty-title">공유더미 비어 있음</span>
       <span className="pile-empty-hint">아무 세트나 리드할 수 있어요</span>
     </div>
@@ -313,15 +324,15 @@ function PileBox({
   if (!top) return null;
   const from = seatNames[top.seatId] ?? top.seatId.slice(-2);
   return (
-    <div className="pile">
+    <div className="pile pile-active">
       <div className="pile-head">
         <span className="pile-head-label">공유더미 · 현재 최고</span>
-        <span className="pile-head-actor">{from}이 냄</span>
+        <span className="pile-head-actor">{from} · 방금 냄</span>
       </div>
       <div className="pile-cards">
         {top.cards.map((c) => (
           <div key={c.id} className={`pile-card ${c.value == null ? "wild" : ""}`}>
-            {c.value ?? "★"}
+            {c.value == null ? "★" : c.value}
           </div>
         ))}
       </div>
@@ -367,34 +378,40 @@ function HandStrip({
   selected,
   form,
   onToggle,
+  sortMode,
 }: {
   hand: MCard[];
   selected: string[];
   form: TrickForm;
   onToggle: (id: string) => void;
+  sortMode: "value" | "group";
 }) {
-  const grouped = useMemo(() => {
-    // Sort by value asc; jesters at end.
+  const sorted = useMemo(() => {
+    // Both modes sort ascending; "group" applies additional per-value grouping
+    // hint via CSS by giving neighbouring same-value cards a shared marker.
     return [...hand].sort((a, b) => {
       if (a.value == null && b.value == null) return 0;
       if (a.value == null) return 1;
       if (b.value == null) return -1;
       return a.value - b.value;
     });
-  }, [hand]);
+  }, [hand, sortMode]);
   return (
     <div className="hand-strip">
-      {grouped.map((c) => {
+      {sorted.map((c, i) => {
         const isSel = selected.includes(c.id);
         const valid = isValidCardInForm(c, form);
         const wild = c.value == null;
         const tone = wild ? "wild" : c.value! === 1 ? "royal" : "white";
         const disabled = form.kind !== "none" && !valid && !wild;
+        const prev = sorted[i - 1];
+        const groupsWithPrev =
+          !wild && prev && !isDif(c, prev);
         return (
           <button
             key={c.id}
             type="button"
-            className="hand-card"
+            className={`hand-card ${groupsWithPrev ? "grouped" : ""}`}
             data-tone={tone}
             data-selected={isSel ? "true" : "false"}
             data-disabled={disabled ? "true" : "false"}
@@ -407,4 +424,9 @@ function HandStrip({
       })}
     </div>
   );
+}
+
+function isDif(a: MCard, b: MCard): boolean {
+  if (a.value == null && b.value == null) return false;
+  return a.value !== b.value;
 }

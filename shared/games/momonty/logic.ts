@@ -183,9 +183,43 @@ function seatById(seats: string[], id: string): number {
   return seats.indexOf(id);
 }
 
+function canBeatCurrentTrick(state: MomontyState, seatId: string): boolean {
+  const trick = state.currentTrick;
+  if (trick.form.kind === "none") return true;
+  const hand = state.hands[seatId] ?? [];
+  const jesters = hand.filter((c) => c.value === null).length;
+  const numbered = hand.filter((c) => c.value !== null) as (Card & { value: number })[];
+  const target = "value" in trick.form ? trick.form.value : trick.form.startValue;
+  const size =
+    trick.form.kind === "single"
+      ? 1
+      : trick.form.kind === "pair"
+      ? 2
+      : trick.form.kind === "triple"
+      ? 3
+      : trick.form.kind === "quad"
+      ? 4
+      : trick.form.length;
+  // Set-form check: any value strictly lower with enough copies + jesters
+  if (trick.form.kind !== "straight") {
+    for (let v = 1; v < target; v++) {
+      const copies = numbered.filter((c) => c.value === v).length;
+      if (copies + jesters >= size) return true;
+    }
+    return false;
+  }
+  // Straight — look for a run of length `size` starting at any s < target.
+  const valueSet = new Set(numbered.map((c) => c.value));
+  for (let start = 1; start < target; start++) {
+    let missing = 0;
+    for (let i = 0; i < size; i++) if (!valueSet.has(start + i)) missing++;
+    if (missing <= jesters) return true;
+  }
+  return false;
+}
+
 function nextSeat(state: MomontyState): void {
   state.currentSeatIdx = (state.currentSeatIdx + 1) % state.seatOrder.length;
-  // Skip seats who are out (empty hand) OR who have already passed on this trick.
   const trick = state.currentTrick;
   for (let n = 0; n < state.seatOrder.length; n++) {
     const seatId = state.seatOrder[state.currentSeatIdx];
@@ -199,9 +233,21 @@ function nextSeat(state: MomontyState): void {
       continue;
     }
     if (trick.topPlay && trick.topPlay.seatId === seatId) {
-      // Trick has come back to the leader — everyone else passed. Clear pile.
+      // Trick came back to the leader — everyone else passed. Clear pile.
       clearTrick(state);
       return;
+    }
+    // Auto-pass unplayable: if the seat can't beat the current form and the
+    // option is on, mark them as passed and continue rotating.
+    if (
+      state.config.autoPassOnUnplayable &&
+      trick.form.kind !== "none" &&
+      !canBeatCurrentTrick(state, seatId)
+    ) {
+      trick.passSeatIds.push(seatId);
+      state.history.push({ type: "autoPass", seatId });
+      state.currentSeatIdx = (state.currentSeatIdx + 1) % state.seatOrder.length;
+      continue;
     }
     return;
   }

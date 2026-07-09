@@ -1,20 +1,18 @@
 /*
- * Play trick — matches 시안 § ③ 플레이.
+ * Play trick — matches 시안 § ③ 플레이 pixel spec.
  *
- * Composed of:
- *   .play-header (gold turn pill)
- *   .opp-strip (4 opponent cells)
- *   .req-pill (current requirement, only when following)
- *   .pile (empty state OR active box with top cards + actor)
- *   .sel-pill (selected preview)
- *   .hand-strip (grouped cards with valid/dim/wild tones)
- *   .action-bar (패스 + gradient CTA)
+ * Header · Opp strip · Requirement pill · Pile (empty/active) ·
+ * Selected preview · Hand (grouped) · Action bar.
+ *
+ * Empty pile is a fixed-height card, NOT flex-grow. That keeps the
+ * lion's share of vertical space for the hand strip, matching the
+ * mockup rhythm.
  */
 
 .play-trick {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   padding-bottom: 8px;
   flex: 1;
   min-height: 0;
@@ -26,7 +24,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 2px 2px;
+  padding: 0 2px;
 }
 .turn-pill {
   display: inline-flex;
@@ -56,6 +54,38 @@
   animation: m-blink 1s infinite;
 }
 
+/* Timer ring — conic-gradient pie clipped to a circle. */
+.timer-ring {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent-1) 75%, rgba(255, 255, 255, 0.12) 0);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.timer-ring-inner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--surface-1);
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 1px;
+  color: #fff;
+  font-family: var(--font-brand);
+  font-weight: 800;
+}
+.timer-value {
+  font-size: 13px;
+}
+.timer-unit {
+  font-size: 8px;
+  opacity: 0.6;
+}
+
 /* -------------------------- Opponents -------------------------- */
 
 .opp-strip {
@@ -69,7 +99,7 @@
   padding: 8px 6px;
   border-radius: 11px;
   background: var(--glass-2);
-  border: 1px solid var(--glass-border-1);
+  border: 1px solid var(--glass-border-2);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -80,7 +110,7 @@
   box-shadow: 0 0 12px var(--accent-glow);
 }
 .opp-cell[data-passed="true"] {
-  opacity: 0.45;
+  opacity: 0.5;
 }
 .opp-name {
   font-size: 11px;
@@ -89,11 +119,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.opp-back {
-  font-family: var(--font-brand);
-  font-size: 12.5px;
+.opp-count {
   color: var(--accent-1);
+  font-family: var(--font-brand);
   font-weight: 700;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  justify-content: center;
+}
+.opp-back-icon {
+  font-size: 12px;
+  opacity: 0.8;
 }
 
 /* -------------------------- Requirement pill -------------------------- */
@@ -118,36 +156,38 @@
 
 /* -------------------------- Pile -------------------------- */
 
-.pile {
-  border-radius: 16px;
-  background: var(--glass-1);
-  border: 1px solid var(--glass-border-2);
-  padding: 12px;
-}
 .pile-empty {
-  flex: 1;
-  min-height: 130px;
+  border-radius: 16px;
+  padding: 20px 16px;
+  border: 1.5px dashed var(--accent-border);
+  background: rgba(255, 255, 255, 0.02);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border: 1.5px dashed var(--accent-border);
-  background: var(--glass-1);
+  min-height: 120px;
 }
 .pile-empty-icon {
-  font-size: 26px;
-  opacity: 0.55;
+  font-size: 24px;
+  opacity: 0.5;
 }
 .pile-empty-title {
   color: var(--accent-1);
   font-family: var(--font-brand);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
 }
 .pile-empty-hint {
   color: var(--text-5);
-  font-size: 10.5px;
+  font-size: 11.5px;
+}
+
+.pile-active {
+  border-radius: 16px;
+  background: var(--glass-1);
+  border: 1px solid var(--glass-border-2);
+  padding: 12px;
 }
 .pile-head {
   display: flex;
@@ -157,13 +197,14 @@
 .pile-head-label {
   font-family: var(--font-brand);
   font-weight: 700;
-  font-size: 9.5px;
+  font-size: 10px;
   color: var(--text-5);
   letter-spacing: 0.06em;
 }
 .pile-head-actor {
   color: var(--accent-1);
-  font-size: 10px;
+  font-size: 10.5px;
+  font-weight: 600;
 }
 .pile-cards {
   margin-top: 8px;
@@ -172,14 +213,14 @@
   justify-content: center;
 }
 .pile-card {
-  width: 40px;
-  height: 56px;
+  width: 42px;
+  height: 58px;
   border-radius: 8px;
   background: linear-gradient(160deg, #fdfcff, #e7e2f5);
   color: #2a2350;
   font-family: var(--font-brand);
   font-weight: 800;
-  font-size: 18px;
+  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -209,13 +250,13 @@
   margin: 0 1px;
 }
 .sel-good {
-  background: rgba(52, 211, 153, 0.12);
-  border: 1px solid rgba(52, 211, 153, 0.3);
+  background: rgba(52, 211, 153, 0.14);
+  border: 1px solid rgba(52, 211, 153, 0.35);
   color: var(--pos-1);
 }
 .sel-bad {
-  background: rgba(248, 113, 113, 0.12);
-  border: 1px solid rgba(248, 113, 113, 0.3);
+  background: rgba(248, 113, 113, 0.14);
+  border: 1px solid rgba(248, 113, 113, 0.35);
   color: var(--neg-2);
 }
 .sel-wild {
@@ -228,14 +269,14 @@
   gap: 3px;
 }
 .sel-mini-card {
-  width: 18px;
-  height: 24px;
+  width: 20px;
+  height: 26px;
   border-radius: 4px;
   background: #fff;
   color: #2a2350;
   font-family: var(--font-brand);
   font-weight: 800;
-  font-size: 10px;
+  font-size: 10.5px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -248,21 +289,32 @@
 
 /* -------------------------- Hand -------------------------- */
 
+.hand-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 .hand-label {
   color: var(--text-5);
   font-size: 11px;
-  font-weight: 700;
-  margin-top: 4px;
+  font-weight: 600;
+}
+.hand-label b {
+  color: var(--text-2);
+  font-family: var(--font-brand);
+  font-weight: 800;
+  margin: 0 2px;
 }
 .hand-strip {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  padding: 4px 0 8px;
+  gap: 4px;
+  padding: 4px 0 4px;
+  justify-content: flex-start;
 }
 .hand-card {
-  width: 30px;
-  height: 42px;
+  width: 32px;
+  height: 44px;
   border-radius: 7px;
   background: #fff;
   color: #2a2350;
@@ -279,6 +331,9 @@
   transition: transform var(--dur-fast) var(--easing);
   flex: none;
 }
+.hand-card.grouped {
+  margin-left: -6px; /* fan same-value neighbours */
+}
 .hand-card[data-tone="royal"] {
   color: var(--gold-4);
 }
@@ -289,23 +344,24 @@
 }
 .hand-card[data-selected="true"] {
   background: linear-gradient(160deg, #fff7e6, #fdecc4);
-  box-shadow: 0 0 0 2px var(--accent-1), 0 4px 8px -3px var(--accent-glow);
-  transform: translateY(-4px);
+  box-shadow: 0 0 0 2px var(--accent-1), 0 5px 10px -3px var(--accent-glow);
+  transform: translateY(-6px);
+  z-index: 2;
 }
 .hand-card[data-tone="wild"][data-selected="true"] {
   background: linear-gradient(160deg, #3a2f60, #241d44);
-  box-shadow: 0 0 0 2px var(--brand-purple-2), 0 4px 8px -3px rgba(200, 85, 240, 0.5);
+  box-shadow: 0 0 0 2px var(--brand-purple-2), 0 5px 10px -3px rgba(200, 85, 240, 0.5);
 }
 .hand-card[data-disabled="true"] {
   background: #8f8aa8;
   color: #4b4670;
-  opacity: 0.45;
+  opacity: 0.4;
   box-shadow: none;
 }
 .mini-crown {
   position: absolute;
-  top: -6px;
-  font-size: 10px;
+  top: -7px;
+  font-size: 11px;
   filter: drop-shadow(0 0 3px var(--accent-glow));
 }
 
@@ -317,18 +373,22 @@
   gap: 8px;
   padding-top: 8px;
 }
-.pass-btn {
+.pass-btn,
+.side-btn {
   flex: none;
   padding: 14px 18px;
   border-radius: 12px;
   background: var(--glass-3);
   border: 1px solid var(--glass-border-3);
-  color: #fda4af;
+  color: var(--text-3);
   font-family: var(--font-body);
   font-weight: 700;
   font-size: 13.5px;
   cursor: pointer;
-  min-width: 92px;
+  min-width: 88px;
+}
+.pass-btn {
+  color: #fda4af;
 }
 .pass-btn:disabled {
   opacity: 0.4;
