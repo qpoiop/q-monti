@@ -497,6 +497,9 @@ function beginRound(state: MomontyState, rng: Rng): void {
   const deck = rng.shuffle(buildDeck(cfg));
   const seats = state.seatOrder;
   state.hands = {};
+  // Fresh history per round so HistorySheet's "이번 라운드" tab reflects
+  // only what actually happened in the current round.
+  state.history = [];
   const handSize = Math.floor(deck.length / seats.length);
   for (let i = 0; i < seats.length; i++) {
     state.hands[seats[i]] = deck.slice(i * handSize, i * handSize + handSize);
@@ -749,6 +752,7 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
       if (action.t === "pass") {
         if (state.currentTrick.form.kind === "none") throw new Error("cannot pass when leading");
         state.currentTrick.passSeatIds.push(seatId);
+        state.history.push({ type: "pass", seatId });
         events.push({ type: "pass", actorSeatId: seatId });
         nextSeat(state);
         // Stall guard: if the trick's leader is out (empty hand) and every
@@ -817,6 +821,11 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
         };
         state.currentTrick.form = analysis.form;
         state.currentTrick.passSeatIds = [];
+        state.history.push({
+          type: "play",
+          seatId,
+          payload: { cards: picked, form: analysis.form },
+        });
         events.push({
           type: "play",
           actorSeatId: seatId,
