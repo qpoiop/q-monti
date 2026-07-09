@@ -28,19 +28,22 @@ import type { GameEvent, GameModule, Rng, Seat } from "../../engine";
 /* -------------------------- Config -------------------------- */
 
 export interface MomontyConfig {
-  playerCount: number; // 4..8, but validated at runtime against actual seats
-  cardMax: number; // usually 12, cards run 1..cardMax
-  copiesPerValue: number; // 6 (so 12*6 = 72 numbered cards)
-  jesters: number; // 2 (wild)
+  playerCount: number;
+  cardMax: number;
+  copiesPerValue: number;
+  jesters: number;
   taxationEnabled: boolean;
+  /** Revolution is dependent on taxation — the setup UI enforces this. */
   revolutionEnabled: boolean;
   greatRevolutionEnabled: boolean;
-  jesterPenalty: boolean; // -2 if still holding a jester at round end
+  jesterPenalty: boolean;
   autoPassOnUnplayable: boolean;
-  quadLock: boolean; // if all copies of a number are played, clear immediately
+  quadLock: boolean;
   turnLimitSec: number;
   targetRounds: number;
   historyMode: "all" | "last" | "none";
+  /** After tax completes, briefly show who gave whom what. */
+  taxResultVisible: boolean;
 }
 
 export const defaultConfig: MomontyConfig = {
@@ -59,6 +62,7 @@ export const defaultConfig: MomontyConfig = {
   turnLimitSec: 20,
   targetRounds: 7,
   historyMode: "all",
+  taxResultVisible: true,
 };
 
 /* -------------------------- Card -------------------------- */

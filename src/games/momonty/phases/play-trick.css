@@ -79,13 +79,13 @@
   border-radius: 50%;
   background: var(--surface-1);
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: center;
-  gap: 1px;
+  gap: 0;
   color: #fff;
   font-family: var(--font-brand);
   font-weight: 800;
-  padding-bottom: 1px;
+  overflow: hidden;
 }
 .timer-value {
   font-size: 12px;
@@ -96,8 +96,7 @@
   font-size: 7px;
   opacity: 0.6;
   line-height: 1;
-  align-self: flex-end;
-  padding-bottom: 1px;
+  margin-left: 1px;
 }
 .timer-ring.expired {
   background: conic-gradient(var(--neg-1) 360deg, transparent 0);

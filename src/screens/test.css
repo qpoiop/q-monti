@@ -56,6 +56,15 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  max-width: 100%;
+  overflow: hidden;
+}
+.test-seat-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 100px;
 }
 .test-seat-btn[data-lead="true"] {
   border-color: var(--accent-border);
@@ -175,6 +184,62 @@
   color: var(--accent-3);
   font-size: 12px;
   padding: 4px 4px 8px;
+}
+
+/* -------------------------- Setup tabs -------------------------- */
+
+.setup-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 0 20px 8px;
+}
+.setup-tab {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #9a92c0;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.setup-tab.active {
+  background: rgba(242, 193, 78, 0.2);
+  border-color: rgba(242, 193, 78, 0.4);
+  color: #f8d98a;
+  font-weight: 800;
+}
+
+.seat-count-row {
+  display: flex;
+  gap: 5px;
+}
+.seat-count-cell {
+  flex: 1;
+  text-align: center;
+  padding: 9px 0;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #9a92c0;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+.seat-count-cell.active {
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: var(--accent-text-on);
+  border: none;
+  font-weight: 800;
+}
+
+.two-col-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
 /* -------------------------- Menu button + sheet -------------------------- */
