@@ -20,13 +20,28 @@
   justify-content: center;
 }
 
+/*
+ * `--phone-scale` (JS-set from window.innerWidth/height) preserves the
+ * mockup's 280×620 design and scales it uniformly to fill the actual
+ * viewport. The `.phone-scaler` wrapper reserves the resulting *visual*
+ * dimensions so the flex parent centres the frame correctly, while the
+ * `.phone-outer` transform does the actual scaling — this gives us
+ * responsive proportions without touching a single per-element px value.
+ */
+.phone-scaler {
+  width: calc(280px * var(--phone-scale, 1));
+  height: calc(620px * var(--phone-scale, 1));
+  flex: none;
+}
 .phone-outer {
   width: 280px;
+  height: 620px;
   padding: 10px;
   background: var(--surface-frame);
   border-radius: 40px;
   box-shadow: var(--shadow-frame), inset 0 0 0 2px var(--surface-frame-ring);
-  flex: none;
+  transform: scale(var(--phone-scale, 1));
+  transform-origin: top left;
 }
 .phone-inner {
   position: relative;
@@ -63,32 +78,13 @@
 }
 
 /*
- * On any viewport too small to natively hold the 280×620 mockup, the
- * frame is scaled to fit. `min(vw / 300, vh / 640)` keeps the aspect
- * ratio and adds a small safety margin so the visual never bleeds off.
- * Because CSS transform: scale doesn't affect the logical layout, the
- * outer flex container still centres on the 280×620 logical box while
- * the visual frame fills the viewport.
- *
- * We match on the union of `max-width: 900px` (narrow browsers, small
- * tablets, phones) and any portrait viewport that would otherwise
- * leave the mockup dwarfed. Desktop-sized windows fall through at
- * scale=1 without wasted paint.
+ * Mobile / narrow viewport tweaks. Desktop stays flex-centered as-is;
+ * on portrait / narrow it centres against the (scaled) visual box.
  */
 @media (max-width: 900px), (orientation: portrait) {
   .desktop-stage {
     align-items: center;
     padding: 0;
-  }
-  .phone-outer {
-    transform-origin: center;
-    transform: scale(min(calc(100vw / 300), calc(100dvh / 640)));
-  }
-}
-/* Never scale up beyond native size on wide desktops. */
-@media (min-width: 1200px) and (orientation: landscape) {
-  .phone-outer {
-    transform: none;
   }
 }
 
