@@ -333,6 +333,60 @@ export function setActingSeat(seatId: string): void {
   void mirrorToGlobalStore();
 }
 
+/**
+ * Hand the current seat off to the bot policy — plays autonomous turns
+ * for the viewer's seat as well as every other seat until the round
+ * ends or the match is over. Useful for smoke-testing multi-round
+ * transitions and match end without hand-playing each turn.
+ */
+export function runBotForHuman(): void {
+  if (!current) return;
+  let state = current.state;
+  const events: unknown[] = [];
+  const startRound = state.round;
+  for (let step = 0; step < 400; step++) {
+    if (state.phase === "MATCH_END") break;
+    if (state.phase === "ROUND_END" && state.round !== startRound) break;
+    const activeSeat = seatToDrive(state, current.actingSeatId);
+    if (!activeSeat) break;
+    const bot = botAction(state, activeSeat);
+    if (!bot) break;
+    const rng = makeRng(`test:hand-off:${current.version}:${step}:${activeSeat}`);
+    try {
+      const result = momontyGame.reduce({
+        state,
+        seatId: activeSeat,
+        action: bot,
+        rng,
+      });
+      state = result.state;
+      for (const e of result.events) events.push(e);
+    } catch {
+      try {
+        const rng2 = makeRng(`test:hand-off-pass:${current.version}:${step}:${activeSeat}`);
+        const result = momontyGame.reduce({
+          state,
+          seatId: activeSeat,
+          action: { t: "pass" },
+          rng: rng2,
+        });
+        state = result.state;
+        for (const e of result.events) events.push(e);
+      } catch {
+        break;
+      }
+    }
+  }
+  current = {
+    ...current,
+    state: { ...state },
+    events,
+    version: current.version + 1,
+  };
+  notify();
+  void mirrorToGlobalStore();
+}
+
 async function mirrorToGlobalStore(): Promise<void> {
   if (!current) return;
   const { patchState } = await import("./store");

@@ -5,6 +5,7 @@ import { DesktopStage } from "./DesktopStage";
 import {
   initTest,
   resetTest,
+  runBotForHuman,
   setActingSeat,
   useTest,
   viewForSeat,
@@ -353,7 +354,17 @@ function TestPlay() {
           }
         />
         <div className="test-seat-picker-wrap">
-          <div className="test-seat-picker-label">🧪 테스트 · 좌석 전환</div>
+          <div className="test-seat-picker-label">
+            🧪 테스트 · 좌석 전환
+            <button
+              type="button"
+              className="test-run-bot"
+              onClick={() => runBotForHuman()}
+              title="현재 좌석의 이번 라운드 전체를 봇에게 넘김"
+            >
+              ▶ 봇에게 넘기기
+            </button>
+          </div>
           <div className="test-seat-picker">
             {rawState.seatOrder.map((seatId) => (
               <button

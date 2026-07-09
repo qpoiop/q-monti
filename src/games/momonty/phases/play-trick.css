@@ -315,8 +315,10 @@
 }
 .pile-head {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding-right: 84px; /* keep the history chip from covering the actor */
 }
 .pile-head-label {
   font-family: var(--font-brand);
