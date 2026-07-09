@@ -25,6 +25,13 @@ Snapshot of what's shipped, what's live, and what's left. Written for context re
 
 ## Shipped (in reverse-chron)
 
+- **Empty pile amber tint**: soft radial-gradient at the base so the empty state feels branded while it waits for a lead.
+- **완주 tag**: opp-cell shows an emerald 완주 tag when a seat's hand hits zero instead of "🂠0".
+- **Connection stuck escape**: after 12s of "서버 연결 중" the overlay offers a 홈으로 ghost button.
+- **Farewell page 종료 + viewport**: previously only 다시 열기, no viewport meta. Now shows a 종료 button (with a soft tip when window.close fails) and pins a viewport meta so the reopened home doesn't render at desktop scale on mobile.
+- **Test target rounds = 2 default**: /test opens with 2 target rounds so MATCH_END is reachable in a couple of clicks.
+- **테스트 mode MATCH_END CTA**: FooterBar 새 테스트 button lets testers reset without hitting browser back.
+- **Header round/target**: test header reads "R2/7 · 카드 플레이".
 - **Lobby seat row nickname ellipsis**: long display names shrink instead of pushing the status pill offscreen.
 - **Sort button label**: reads "↑ 낮은 순" / "↓ 높은 순" / "≡ 묶음" instead of a bare glyph.
 - **Selected-hand highlight**: cream→gold gradient + gold outline ring; wild variant purple.
