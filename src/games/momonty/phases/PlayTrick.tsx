@@ -330,23 +330,53 @@ export function PlayTrick({ view }: { view: MomontyView }) {
         <div className="wild-hint">
           <div className="wild-hint-head">
             <span className="wild-hint-eyebrow">★ 와일드 모드</span>
-            <span className="wild-hint-sub">광대 {countJesters(hand)}장 · 조합 힌트</span>
+            <span className="wild-hint-sub">
+              광대 {countJesters(hand)}장 · 조합 힌트
+            </span>
           </div>
-          <div className="wild-hint-list">
-            {wildTips.map((t, i) => (
-              <button
-                key={i}
-                type="button"
-                className="wild-hint-chip"
-                onClick={() => setSelected(t.cardIds)}
-              >
-                <span className="wild-hint-lead">{t.value}×{t.size}</span>
-                <span className="wild-hint-tail">
-                  {t.baseCount}장 + ★{t.wildCount}
+          <button
+            type="button"
+            className="wild-build"
+            onClick={() => setSelected(wildTips[0].cardIds)}
+          >
+            <span className="wild-build-label">
+              내 세트 만들기 · {wildTips[0].value}={wildTips[0].value} (
+              {wildTips[0].baseCount}장 + 광대 {wildTips[0].wildCount})
+            </span>
+            <span className="wild-build-cards">
+              {Array.from({ length: wildTips[0].baseCount }).map((_, i) => (
+                <span key={`b${i}`} className="wild-build-card">
+                  {wildTips[0].value}
                 </span>
-              </button>
-            ))}
-          </div>
+              ))}
+              <span className="wild-build-plus">+</span>
+              {Array.from({ length: wildTips[0].wildCount }).map((_, i) => (
+                <span key={`w${i}`} className="wild-build-card wild">
+                  ★<span className="wild-build-eq">={wildTips[0].value}</span>
+                </span>
+              ))}
+            </span>
+          </button>
+          {wildTips.length > 1 ? (
+            <div className="wild-hint-alts">
+              <span className="wild-hint-alts-label">다른 조합</span>
+              {wildTips.slice(1).map((t, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="wild-hint-chip"
+                  onClick={() => setSelected(t.cardIds)}
+                >
+                  <span className="wild-hint-lead">
+                    {t.value}×{t.size}
+                  </span>
+                  <span className="wild-hint-tail">
+                    {t.baseCount}장 + ★{t.wildCount}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
 

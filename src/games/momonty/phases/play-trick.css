@@ -241,7 +241,80 @@
   border: 1px solid rgba(200, 85, 240, 0.32);
   display: flex;
   flex-direction: column;
+  gap: 8px;
+}
+
+.wild-build {
+  padding: 11px 12px;
+  border-radius: 13px;
+  background: rgba(200, 85, 240, 0.1);
+  border: 1px solid rgba(200, 85, 240, 0.3);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+.wild-build:active {
+  transform: scale(0.98);
+}
+.wild-build-label {
+  color: #e0b6ff;
+  font-family: var(--font-brand);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.wild-build-cards {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 6px;
+}
+.wild-build-card {
+  width: 32px;
+  height: 44px;
+  border-radius: 7px;
+  background: #fff;
+  color: #2a2350;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.wild-build-card.wild {
+  background: linear-gradient(160deg, #3a2f60, #241d44);
+  border: 1.5px solid var(--brand-purple-2);
+  color: #e0b6ff;
+  box-shadow: 0 0 12px rgba(200, 85, 240, 0.45);
+  flex-direction: column;
+  gap: 1px;
+}
+.wild-build-eq {
+  font-size: 7px;
+  line-height: 1;
+  opacity: 0.85;
+}
+.wild-build-plus {
+  color: #6b6490;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.wild-hint-alts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.wild-hint-alts-label {
+  color: var(--text-4);
+  font-size: 9.5px;
+  font-weight: 700;
 }
 .wild-hint-head {
   display: flex;
