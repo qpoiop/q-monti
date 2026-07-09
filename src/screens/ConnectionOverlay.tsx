@@ -69,6 +69,11 @@ export function ConnectionOverlay() {
     ? "다시 연결을 시도합니다"
     : "네트워크 상태를 확인해주세요";
 
+  // Show a "홈으로" escape hatch when a connect attempt drags on so the
+  // user isn't stranded staring at a spinner. Fires after 12s.
+  const connectStuck =
+    status === "connecting" && startedAt != null && now - startedAt > 12_000;
+
   const actions: OverlayAction[] = expired
     ? [
         {
@@ -81,7 +86,15 @@ export function ConnectionOverlay() {
         },
       ]
     : status === "connecting"
-    ? []
+    ? connectStuck
+      ? [
+          {
+            label: "홈으로",
+            variant: "ghost",
+            onClick: () => navigate({ name: "home" }),
+          },
+        ]
+      : []
     : inRoom
     ? [
         {
