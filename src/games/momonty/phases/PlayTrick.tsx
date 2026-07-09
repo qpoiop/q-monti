@@ -68,6 +68,7 @@ export function PlayTrick({ view }: { view: MomontyView }) {
           variant="ghost"
           disabled={!myTurn || !canPass}
           onClick={() => send({ t: "action", action: { t: "pass" } })}
+          style={{ minWidth: 92, flex: "none" }}
         >
           패스
         </Button>
@@ -91,6 +92,10 @@ const RANK_COLOR: Record<Rank, string> = {
 
 function SeatRing({ view }: { view: MomontyView }) {
   const seats = view.seatOrder;
+  const nameFor = (seatId: string): string => {
+    if (seatId === view.mySeatId) return "나";
+    return view.seatNames?.[seatId] ?? seatId.slice(-2);
+  };
   return (
     <div className="seat-ring">
       <div className="seat-ring-pile">
@@ -136,7 +141,7 @@ function SeatRing({ view }: { view: MomontyView }) {
             }
           >
             <div className="seat-ring-avatar" data-passed={passed ? "true" : "false"}>
-              {isMine ? "나" : seatId.slice(-2)}
+              {nameFor(seatId)}
             </div>
             <div className="seat-ring-count">{view.handCounts[seatId] ?? 0}장</div>
           </div>

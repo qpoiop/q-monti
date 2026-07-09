@@ -406,6 +406,10 @@ export interface MomontyView {
   };
   match: MomontyState["match"];
   drawRank?: MomontyState["drawRank"];
+  /** Optional: display names keyed by seatId. Live rooms populate this
+   * from `seats`; test store from its local map. When absent, views
+   * fall back to seatId short suffix. */
+  seatNames?: Record<string, string>;
 }
 
 /* -------------------------- Round setup -------------------------- */

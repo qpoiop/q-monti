@@ -1,0 +1,144 @@
+/*
+ * Draw-rank phase — the mockup's opening beat.
+ *   Header cluster · fanned cards · result pill · progress · CTA.
+ * Vertical rhythm uses clamp so the phase breathes on any viewport.
+ */
+
+.draw-rank {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(14px, 2.5vh, 22px);
+  padding-bottom: clamp(16px, 3vh, 24px);
+}
+
+.draw-rank-heading {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.draw-rank-eyebrow {
+  color: var(--accent-3);
+  font-family: var(--font-brand);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+.draw-rank-title {
+  color: #fff;
+  font-family: var(--font-brand);
+  font-weight: 900;
+  font-size: clamp(18px, 3vh, 22px);
+  letter-spacing: -0.01em;
+}
+.draw-rank-sub {
+  color: var(--text-4);
+  font-size: 12px;
+}
+
+.draw-rank-fan {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(6px, 1.5vw, 10px);
+  padding: clamp(8px, 1vh, 14px) 0;
+}
+.draw-rank-centre {
+  transform: translateY(-6px);
+}
+
+.draw-rank-result {
+  display: inline-block;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--accent-3);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-body);
+}
+.draw-rank-result b {
+  color: #fff;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 15px;
+  margin: 0 2px;
+}
+.draw-rank-hint {
+  color: var(--text-5);
+  font-size: 12px;
+}
+
+.draw-rank-progress {
+  width: 100%;
+  background: var(--glass-2);
+  border: 1px solid var(--glass-border-1);
+  border-radius: 16px;
+  padding: 12px 14px;
+}
+.draw-rank-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--glass-border-1);
+}
+.draw-rank-progress-label {
+  color: var(--text-5);
+  font-family: var(--font-brand);
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+}
+.draw-rank-progress-count {
+  color: var(--accent-3);
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 12px;
+}
+.draw-rank-progress-list {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 2px;
+}
+.draw-rank-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px;
+  border-bottom: 1px dashed var(--glass-border-1);
+}
+.draw-rank-row:last-child {
+  border-bottom: none;
+}
+.draw-rank-row-name {
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.draw-rank-row[data-mine="true"] .draw-rank-row-name {
+  color: var(--accent-3);
+  font-weight: 800;
+}
+.draw-rank-row-value {
+  font-family: var(--font-brand);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-6);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.draw-rank-row-value[data-done="true"] {
+  color: #fff;
+}
+.crown-mini {
+  font-size: 12px;
+  filter: drop-shadow(0 0 4px var(--accent-glow));
+}
+
+.draw-rank-cta {
+  width: 100%;
+  margin-top: auto;
+}

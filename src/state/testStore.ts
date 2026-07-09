@@ -6,25 +6,26 @@ import { makeRng, type Seat } from "@shared/engine";
 /**
  * Test-mode store.
  *
- * Runs the shared Momonty engine entirely in-browser. No WebSocket, no
- * Durable Object — the local host is every seat, taking turns from a
- * "spy view" that reveals all hands. Purpose is to smoke-test the full
- * game flow end-to-end from the client without infra.
+ * Runs the shared Momonty engine in the browser. No transport / DO.
+ * The single host is every seat — they take turns from a "spy view"
+ * that reveals whichever seat is currently acting. Purpose is to smoke
+ * test the full game flow client-side without infra.
  *
- * The store re-uses the same reducer that ships to production, so a
- * successful flow here proves the engine + views on the whole match
- * loop (rank draw → tax → play → round-end → next round → match end).
+ * IMPORTANT: the shared reducer mutates state in place for efficiency
+ * (it's a server-side hot path). React's `useSyncExternalStore` compares
+ * snapshots with `Object.is` — a mutated-but-same-reference state does
+ * NOT trigger re-render. We therefore shallow-copy the returned state
+ * on every dispatch so consumers see a new reference on every tick.
  */
 
 const SEAT_COUNT = 4;
+const NAMES = ["나 (호스트)", "봇 A", "봇 B", "봇 C", "봇 D", "봇 E", "봇 F", "봇 G"];
 
 export interface TestState {
   state: MomontyState;
   events: unknown[];
   version: number;
-  /** Which seat we're currently acting as (defaults to state.currentSeatId). */
   actingSeatId: string;
-  /** Seat display names for the UI. */
   seatNames: Record<string, string>;
 }
 
@@ -34,12 +35,12 @@ const listeners = new Set<() => void>();
 function notify(): void {
   for (const l of listeners) l();
 }
-
 function subscribe(l: () => void): () => void {
   listeners.add(l);
   return () => listeners.delete(l);
 }
 
+/** Boot a fresh 4-seat local match. */
 export function initTest(): void {
   const seatIds = Array.from({ length: SEAT_COUNT }, (_, i) => `s${i + 1}`);
   const seats: Seat[] = seatIds.map((id, i) => ({
@@ -54,7 +55,7 @@ export function initTest(): void {
   const config = { ...momontyGame.defaultConfig(), playerCount: SEAT_COUNT };
   const state = momontyGame.init({ seats, config, rng });
   current = {
-    state,
+    state: { ...state },
     events: [],
     version: 1,
     actingSeatId: state.seatOrder[0],
@@ -63,9 +64,9 @@ export function initTest(): void {
   notify();
 }
 
-const NAMES = ["나 (호스트)", "봇 A", "봇 B", "봇 C", "봇 D", "봇 E", "봇 F", "봇 G"];
-
-export function testDispatch(action: MomontyAction): { ok: true } | { ok: false; error: string } {
+export function testDispatch(
+  action: MomontyAction
+): { ok: true } | { ok: false; error: string } {
   if (!current) return { ok: false, error: "not initialised" };
   const rng = makeRng(`test:${current.version}:${current.actingSeatId}`);
   try {
@@ -75,12 +76,31 @@ export function testDispatch(action: MomontyAction): { ok: true } | { ok: false;
       action,
       rng,
     });
+    // Auto-advance the acting seat when the phase makes it obvious
+    // (e.g. PLAYING follows `currentSeatIdx`).
+    const nextActing =
+      state.phase === "PLAYING"
+        ? state.seatOrder[state.currentSeatIdx]
+        : state.phase === "DRAWING_RANK"
+        ? // Prefer any seat that hasn't drawn yet, else stay.
+          state.seatOrder.find((s) => state.drawRank?.picks?.[s] == null) ??
+          current.actingSeatId
+        : state.phase === "TAXATION"
+        ? // Prefer any seat still owing tax.
+          state.seatOrder.find(
+            (s) =>
+              (state.taxation.pendingUploads[s] ?? 0) > 0 ||
+              (state.taxation.pendingReturns[s] ?? 0) > 0
+          ) ?? current.actingSeatId
+        : current.actingSeatId;
+
+    // Shallow copy state so React notices the change.
     current = {
       ...current,
-      state,
+      state: { ...state },
       events,
       version: current.version + 1,
-      actingSeatId: state.phase === "PLAYING" ? state.seatOrder[state.currentSeatIdx] : current.actingSeatId,
+      actingSeatId: nextActing,
     };
     notify();
     return { ok: true };
@@ -89,7 +109,6 @@ export function testDispatch(action: MomontyAction): { ok: true } | { ok: false;
   }
 }
 
-/** In test mode we let the host jump to any seat (e.g. tax phase). */
 export function setActingSeat(seatId: string): void {
   if (!current) return;
   current = { ...current, actingSeatId: seatId };
@@ -108,9 +127,16 @@ export function getTestState(): TestState | null {
   return current;
 }
 
+/**
+ * Build a view for a specific seat with display names baked in so the
+ * phase views can render "봇 A" instead of raw "s2".
+ */
 export function viewForSeat(seatId: string | null): MomontyView | null {
   if (!current) return null;
-  return momontyGame.view(current.state, seatId) as MomontyView;
+  const view = momontyGame.view(current.state, seatId) as MomontyView;
+  return { ...view, seatNames: current.seatNames } as MomontyView & {
+    seatNames: Record<string, string>;
+  };
 }
 
 function emptyState(): TestState {

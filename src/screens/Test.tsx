@@ -5,38 +5,31 @@ import { DesktopStage } from "./DesktopStage";
 import {
   initTest,
   setActingSeat,
-  testDispatch,
   useTest,
   viewForSeat,
 } from "@web/state/testStore";
 import { navigate } from "@web/nav/router";
-import type { MomontyAction } from "@shared/games/momonty/logic";
 import { currentPhase } from "@shared/games/momonty/phases";
 import { PHASE_VIEWS } from "@web/games/momonty/phases";
-import {
-  Hint,
-  Row,
-  ScreenBody,
-  Stack,
-  StatusBadge,
-} from "@web/design/layout";
+import { Hint, ScreenBody, StatusBadge } from "@web/design/layout";
 import "./test.css";
 
 /**
- * Solo test screen.
+ * Solo test surface.
  *
- * Boots a local Momonty match with 4 seats, all controlled by the host.
- * The seat selector at the top lets the host jump between players and
- * take each turn — useful for validating the whole flow end-to-end
- * without any network layer.
+ * 4-seat local Momonty match. Header shows the current phase + a
+ * seat-picker so the host jumps between all seats and takes every
+ * turn. Below is the standard PhaseView — same as live rooms.
  */
 export function TestScreen() {
   const has = useTest((s) => s.state != null);
   useEffect(() => {
     if (!has) initTest();
   }, [has]);
+
   const acting = useTest((s) => s.actingSeatId);
   const seatNames = useTest((s) => s.seatNames);
+  const version = useTest((s) => s.version);
   const rawState = useTest((s) => s.state);
 
   if (!rawState) {
@@ -64,7 +57,7 @@ export function TestScreen() {
           title={`테스트 · ${spec.label}`}
           onBack={() => navigate({ name: "home" })}
           right={
-            <StatusBadge tone={guardReason == null ? "active" : "idle"} pulse>
+            <StatusBadge tone={guardReason == null ? "active" : "idle"} pulse={guardReason == null}>
               {guardReason == null ? "행동 가능" : guardReason}
             </StatusBadge>
           }
@@ -80,35 +73,18 @@ export function TestScreen() {
               data-out={(view.handCounts[seatId] ?? 0) === 0 ? "true" : "false"}
               onClick={() => setActingSeat(seatId)}
             >
-              <span className="test-seat-name">{seatNames[seatId]}</span>
+              <span className="test-seat-name">{seatNames[seatId] ?? seatId}</span>
               <span className="test-seat-hand">{view.handCounts[seatId] ?? 0}장</span>
             </button>
           ))}
         </div>
         <ScreenBody>
-          <PhaseView view={view} />
-          <div className="test-log">
-            <div className="test-log-title">최근 이벤트</div>
-            <ul>
-              {(view.historyTail ?? []).slice(-6).map((e, i) => (
-                <li key={i}>
-                  <b>{e.type}</b>
-                  {e.seatId ? ` · ${seatNames[e.seatId] ?? e.seatId}` : ""}
-                </li>
-              ))}
-            </ul>
-          </div>
+          <PhaseView view={view} key={`${version}-${acting}-${spec.id}`} />
           {rawState.phase === "MATCH_END" ? (
-            <div className="test-end">🏆 매치 종료 · 최종 순위 확인 후 홈으로 이동하세요</div>
+            <div className="test-end">🏆 매치 종료 · 홈으로 돌아가주세요</div>
           ) : null}
         </ScreenBody>
       </PhoneFrame>
     </DesktopStage>
   );
-}
-
-/* Expose dispatcher through the same `send()` interface the phase
- * views call, only when we're on the /test route. See store.send. */
-export function testExecute(action: MomontyAction) {
-  return testDispatch(action);
 }
