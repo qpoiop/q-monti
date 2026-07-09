@@ -14,7 +14,7 @@
 .play-trick {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
   padding-bottom: 8px;
   flex: 1;
   min-height: 0;
@@ -34,8 +34,8 @@
   gap: 7px;
   font-family: var(--font-brand);
   font-weight: 700;
-  font-size: 12px;
-  padding: 6px 12px;
+  font-size: 13px;
+  padding: 7px 14px;
   border-radius: 999px;
 }
 .turn-pill.on {
@@ -60,19 +60,19 @@
 
 .opp-strip {
   display: flex;
-  gap: 5px;
+  gap: 6px;
 }
 .opp-cell {
   flex: 1;
   min-width: 0;
   text-align: center;
-  padding: 6px 4px;
-  border-radius: 9px;
+  padding: 8px 6px;
+  border-radius: 11px;
   background: var(--glass-2);
   border: 1px solid var(--glass-border-1);
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 .opp-cell[data-turn="true"] {
   border-color: var(--accent-border);
@@ -83,7 +83,7 @@
   opacity: 0.45;
 }
 .opp-name {
-  font-size: 9.5px;
+  font-size: 11px;
   color: var(--text-4);
   white-space: nowrap;
   overflow: hidden;
@@ -91,7 +91,7 @@
 }
 .opp-back {
   font-family: var(--font-brand);
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--accent-1);
   font-weight: 700;
 }
@@ -100,12 +100,12 @@
 
 .req-pill {
   align-self: center;
-  padding: 6px 14px;
+  padding: 7px 16px;
   border-radius: 999px;
   background: var(--accent-soft);
   border: 1px solid var(--accent-border);
   color: var(--accent-3);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-align: center;
 }
@@ -197,10 +197,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  border-radius: 11px;
+  padding: 10px 14px;
+  border-radius: 12px;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 12px;
 }
 .sel-pill b {
   font-family: var(--font-brand);
@@ -250,25 +250,25 @@
 
 .hand-label {
   color: var(--text-5);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   margin-top: 4px;
 }
 .hand-strip {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  padding: 2px 0 4px;
+  gap: 5px;
+  padding: 4px 0 8px;
 }
 .hand-card {
-  width: 26px;
-  height: 36px;
-  border-radius: 6px;
+  width: 30px;
+  height: 42px;
+  border-radius: 7px;
   background: #fff;
   color: #2a2350;
   font-family: var(--font-brand);
   font-weight: 800;
-  font-size: 12px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -319,16 +319,16 @@
 }
 .pass-btn {
   flex: none;
-  padding: 12px 16px;
+  padding: 14px 18px;
   border-radius: 12px;
   background: var(--glass-3);
   border: 1px solid var(--glass-border-3);
   color: #fda4af;
   font-family: var(--font-body);
   font-weight: 700;
-  font-size: 12.5px;
+  font-size: 13.5px;
   cursor: pointer;
-  min-width: 82px;
+  min-width: 92px;
 }
 .pass-btn:disabled {
   opacity: 0.4;
@@ -336,12 +336,12 @@
 }
 .cta-btn {
   flex: 1;
-  padding: 12px;
+  padding: 14px;
   border-radius: 12px;
   color: #fff;
   font-family: var(--font-body);
   font-weight: 800;
-  font-size: 13.5px;
+  font-size: 14.5px;
   text-align: center;
   border: none;
   cursor: pointer;

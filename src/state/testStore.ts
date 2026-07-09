@@ -40,9 +40,10 @@ function subscribe(l: () => void): () => void {
   return () => listeners.delete(l);
 }
 
-/** Boot a fresh 4-seat local match. */
-export function initTest(): void {
-  const seatIds = Array.from({ length: SEAT_COUNT }, (_, i) => `s${i + 1}`);
+/** Boot a fresh local match. Called with config from the setup screen. */
+export function initTest(opts: { seatCount?: number; config?: any } = {}): void {
+  const seatCount = opts.seatCount ?? SEAT_COUNT;
+  const seatIds = Array.from({ length: seatCount }, (_, i) => `s${i + 1}`);
   const seats: Seat[] = seatIds.map((id, i) => ({
     seatId: id,
     userId: id,
@@ -52,7 +53,8 @@ export function initTest(): void {
     isHost: i === 0,
   }));
   const rng = makeRng(`test:${Date.now()}`);
-  const config = { ...momontyGame.defaultConfig(), playerCount: SEAT_COUNT };
+  const baseConfig = opts.config ?? momontyGame.defaultConfig();
+  const config = { ...baseConfig, playerCount: seatCount };
   const state = momontyGame.init({ seats, config, rng });
   current = {
     state: { ...state },
@@ -61,6 +63,12 @@ export function initTest(): void {
     actingSeatId: state.seatOrder[0],
     seatNames: Object.fromEntries(seats.map((s) => [s.seatId, s.displayName])),
   };
+  notify();
+}
+
+/** Clear the test session — user returns to setup. */
+export function resetTest(): void {
+  current = null;
   notify();
 }
 

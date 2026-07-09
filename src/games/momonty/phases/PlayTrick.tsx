@@ -151,6 +151,13 @@ export function PlayTrick({ view }: { view: MomontyView }) {
         straightLength: cls.kind === "straight" ? cls.size : undefined,
       },
     });
+    // Toast so users get instant feedback for their action.
+    import("@web/state/store").then(({ getState }) => {
+      const label = hasWild
+        ? `${cls.value} ×${cls.size} (★ 와일드) ${isLeading ? "리드" : "내기"} 완료`
+        : `${cls.value} ×${cls.size} ${isLeading ? "리드" : "내기"} 완료`;
+      window.dispatchEvent(new CustomEvent("momonti:toast", { detail: label }));
+    });
     setSelected([]);
   };
 
@@ -228,6 +235,9 @@ export function PlayTrick({ view }: { view: MomontyView }) {
           onClick={() => {
             setSelected([]);
             send({ t: "action", action: { t: "pass" } });
+            window.dispatchEvent(
+              new CustomEvent("momonti:toast", { detail: "패스했어요 · 다음 사람 차례" })
+            );
           }}
         >
           패스
