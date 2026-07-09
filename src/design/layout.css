@@ -432,6 +432,22 @@
   border-radius: 12px;
   background: var(--glass-3);
   border: 1px solid var(--glass-border-2);
+  min-width: 0;
+}
+.seat-row-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.seat-row-name-text {
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .rank-row {

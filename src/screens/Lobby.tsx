@@ -312,15 +312,13 @@ function SeatRow({ s }: { s: SeatPublic }) {
   return (
     <div className="seat-row">
       <span className="seat-avatar">{(s.displayName[0] || "?").toUpperCase()}</span>
-      <div className="grow">
-        <div className="body" style={{ color: "#fff", fontWeight: 700 }}>
-          {s.displayName}
-          {s.isHost ? (
-            <Pill tone="accent" style={{ marginLeft: 6, fontSize: 9, padding: "1px 6px" }}>
-              👑 방장
-            </Pill>
-          ) : null}
-        </div>
+      <div className="grow seat-row-name">
+        <span className="seat-row-name-text">{s.displayName}</span>
+        {s.isHost ? (
+          <Pill tone="accent" style={{ fontSize: 9, padding: "1px 6px" }}>
+            👑 방장
+          </Pill>
+        ) : null}
       </div>
       <span className={`small seat-status seat-status-${statusTone}`}>{statusLabel}</span>
     </div>
