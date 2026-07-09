@@ -143,7 +143,10 @@ export function CreateScreen({ gameId }: { gameId: string }) {
                 isPrivate,
                 maxPlayers,
                 config,
-              }).then(() => navigate({ name: "lobby" }))
+              })
+              // Server-sent `roomState` will transition us into the lobby.
+              // No client-side navigate() here — otherwise the guard bounces
+              // us back to home while the WS is still opening.
             }
           >
             방 만들고 초대 ▶

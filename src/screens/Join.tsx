@@ -3,6 +3,7 @@ import { PhoneFrame } from "@web/design/PhoneFrame";
 import { Button, ScreenHeader } from "@web/design/primitives";
 import { joinRoomByCode } from "@web/state/store";
 import { navigate } from "@web/nav/router";
+// navigate used only by the back button below
 import { DesktopStage } from "./DesktopStage";
 import { FooterBar, Hint, Row, ScreenBody, Stack } from "@web/design/layout";
 
@@ -57,9 +58,10 @@ export function JoinScreen() {
             variant="primary"
             disabled={!canSubmit}
             onClick={() =>
-              joinRoomByCode(code).then((ok) => {
-                if (ok) navigate({ name: "lobby" });
-              })
+              // Server-sent `roomState` transitions us into the lobby once
+              // the WS handshake completes. Route guard would bounce a
+              // premature `navigate({name: "lobby"})` back to home.
+              joinRoomByCode(code)
             }
           >
             입장하기 ▶
