@@ -604,28 +604,32 @@ function SelectedPreview({
       : isLeading
       ? "lead"
       : "good";
-  const label =
+  const status =
     formError === "form-mismatch"
-      ? "· 형태 불일치"
+      ? "형태 불일치"
       : formError === "too-weak"
-      ? "· 더 낮아야 함"
-      : hasWild
-      ? "· ★ 와일드"
+      ? "더 낮은 값 필요"
       : isLeading
-      ? "· 리드 준비"
-      : "· 더 강함 ✓";
+      ? "리드 준비 완료"
+      : "따라내기 가능";
+  const shape =
+    cls.kind === "straight"
+      ? `스트레이트 ${cls.size}장`
+      : `${cls.value}×${cls.size}`;
   return (
     <div className={`sel-pill sel-${tone}`}>
-      <span>
-        선택: {cls.value} <b>×{cls.size}</b> {label}
-      </span>
-      <span className="sel-mini">
+      <div className="sel-pill-line">
+        <span className="sel-pill-shape">{shape}</span>
+        {hasWild ? <span className="sel-pill-badge">★ 와일드</span> : null}
+        <span className="sel-pill-status">{status}</span>
+      </div>
+      <div className="sel-mini">
         {cls.cards.map((c) => (
           <span key={c.id} className={`sel-mini-card ${c.value == null ? "wild" : ""}`}>
             {c.value ?? "★"}
           </span>
         ))}
-      </span>
+      </div>
     </div>
   );
 }
