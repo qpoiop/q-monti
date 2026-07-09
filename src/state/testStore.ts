@@ -232,7 +232,10 @@ function seatToDrive(state: MomontyState, humanSeatId: string): string | null {
 function botAction(state: MomontyState, seatId: string): MomontyAction | null {
   if (state.phase === "DRAWING_RANK") return { t: "drawRank" };
   if (state.phase === "RANK_REVEAL") return { t: "confirmRanks" };
-  if (state.phase === "ROUND_END") return { t: "confirmRoundEnd" };
+  // ROUND_END pause is intentional — the tester needs to see the ranks
+  // before advancing. Do NOT return confirmRoundEnd here; seatToDrive
+  // already routes control back to the human seat, so waiting on human
+  // click is the right default.
   if (state.phase === "TAXATION") {
     const hand = state.hands[seatId] ?? [];
     const owe = state.taxation.pendingUploads[seatId] ?? 0;
