@@ -151,6 +151,7 @@ export function testDispatch(
 /** Delay between bot steps so the human can see each turn advance. */
 const BOT_STEP_MS = 700;
 let botTimer: ReturnType<typeof setTimeout> | null = null;
+let botConsecutivePasses = 0;
 
 function scheduleBotStep(humanSeatId: string, immediate = false): void {
   if (botTimer) clearTimeout(botTimer);
@@ -161,6 +162,13 @@ function scheduleBotStep(humanSeatId: string, immediate = false): void {
     if (!activeSeat) return;
     if (activeSeat === humanSeatId) {
       // Human's turn again — stop stepping and hand control back.
+      botConsecutivePasses = 0;
+      return;
+    }
+    // Bail if bots have been passing indefinitely — a pathological
+    // state shouldn't wedge the tester in a spinner.
+    if (botConsecutivePasses >= current.state.seatOrder.length * 4) {
+      botConsecutivePasses = 0;
       return;
     }
     const bot = botAction(current.state, activeSeat);
@@ -180,6 +188,8 @@ function scheduleBotStep(humanSeatId: string, immediate = false): void {
         version: current.version + 1,
         actingSeatId: seatToDrive(result.state, humanSeatId) ?? humanSeatId,
       };
+      if (bot.t === "pass") botConsecutivePasses++;
+      else botConsecutivePasses = 0;
       notify();
       void mirrorToGlobalStore();
     } catch {
