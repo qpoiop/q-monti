@@ -76,13 +76,16 @@
 }
 .tax-transfer-row {
   display: grid;
-  grid-template-columns: 1fr auto 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.tax-transfer-row .tax-cards {
+  flex-shrink: 0;
 }
 .tax-side {
   min-width: 0;

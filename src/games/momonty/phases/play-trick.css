@@ -434,12 +434,15 @@
 /* Reserved slot — always occupies the sel-pill height so tapping a
  * card doesn't shift the whole layout. */
 .sel-slot {
-  min-height: 40px;
+  min-height: 44px;
   display: flex;
   align-items: center;
 }
 .sel-slot:empty {
-  min-height: 40px;
+  min-height: 44px;
+}
+.sel-slot > * {
+  width: 100%;
 }
 .sel-bad {
   background: rgba(248, 113, 113, 0.14);
