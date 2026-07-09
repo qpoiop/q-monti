@@ -36,8 +36,8 @@ export function HomeScreen() {
             <Button full variant="ghost" onClick={() => navigate({ name: "join" })}>
               코드로 입장
             </Button>
-            <Button full variant="accent-soft">
-              ⚡ 빠른 매칭 (준비중)
+            <Button full variant="accent-soft" onClick={() => navigate({ name: "test" })}>
+              🧪 테스트 모드 (호스트 단독)
             </Button>
           </Stack>
           <div className="home-profile">

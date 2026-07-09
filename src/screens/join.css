@@ -1,0 +1,32 @@
+/*
+ * Join screen — code cells at top, keypad + submit anchored to bottom.
+ * A flex spacer between the two clusters absorbs any leftover height so
+ * the layout doesn't compress on small screens or float on tall ones.
+ */
+
+.join-page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.join-top {
+  padding: 8px 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 3vh, 28px);
+}
+.join-bottom {
+  margin-top: auto;
+  padding: 12px 20px calc(16px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.code-cells {
+  display: flex;
+  gap: clamp(6px, 1.6vw, 10px);
+  justify-content: center;
+  margin-top: 4px;
+}

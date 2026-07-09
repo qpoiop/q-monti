@@ -23,16 +23,29 @@ export function Button({
   size?: "sm" | "md" | "lg";
   style?: CSSProperties;
 }) {
-  const padY = size === "sm" ? 10 : size === "lg" ? 16 : 14;
-  const fontSize = size === "sm" ? 12.5 : size === "lg" ? 16 : 14;
+  // Responsive sizing — reads from CSS clamp so buttons breathe on
+  // small phones and stay readable on tablets. Sizes exposed as CSS
+  // custom properties per size preset.
   const base: CSSProperties = {
-    padding: `${padY}px 16px`,
+    padding: `var(--btn-py) 16px`,
     borderRadius: 14,
     fontWeight: 800,
-    fontSize,
+    fontSize: "var(--btn-fz)",
     textAlign: "center",
     width: full ? "100%" : undefined,
     transition: "transform var(--dur-fast) var(--easing), opacity var(--dur-fast)",
+    ["--btn-py" as any]:
+      size === "sm"
+        ? "clamp(9px, 1.3vh, 12px)"
+        : size === "lg"
+        ? "clamp(15px, 2.4vh, 20px)"
+        : "clamp(12px, 2vh, 17px)",
+    ["--btn-fz" as any]:
+      size === "sm"
+        ? "clamp(12px, 1.6vh, 13.5px)"
+        : size === "lg"
+        ? "clamp(15px, 2.2vh, 18px)"
+        : "clamp(13.5px, 2vh, 16px)",
   };
   const variants: Record<ButtonVariant, CSSProperties> = {
     primary: {

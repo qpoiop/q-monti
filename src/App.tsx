@@ -6,6 +6,7 @@ import { JoinScreen } from "./screens/Join";
 import { LobbyScreen } from "./screens/Lobby";
 import { PlayScreen } from "./screens/Play";
 import { ResultScreen } from "./screens/Result";
+import { TestScreen } from "./screens/Test";
 import { ConnectionOverlay } from "./screens/ConnectionOverlay";
 import { Toast } from "./screens/Toast";
 import { InstallLayer } from "./screens/InstallLayer";
@@ -37,6 +38,8 @@ export function App() {
         return <PlayScreen />;
       case "result":
         return <ResultScreen />;
+      case "test":
+        return <TestScreen />;
     }
   })();
 

@@ -31,6 +31,8 @@ function routeToPath(r: Route): string {
       return "/play";
     case "result":
       return "/result";
+    case "test":
+      return "/test";
   }
 }
 
@@ -41,6 +43,7 @@ function pathToRoute(path: string): Route {
   if (path.startsWith("/lobby")) return { name: "lobby" };
   if (path.startsWith("/play")) return { name: "play" };
   if (path.startsWith("/result")) return { name: "result" };
+  if (path.startsWith("/test")) return { name: "test" };
   return { name: "home" };
 }
 
@@ -128,6 +131,7 @@ function guard(r: Route): Route {
     case "create":
     case "join":
     case "home":
+    case "test":
       break;
   }
   return r;

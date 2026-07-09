@@ -25,7 +25,8 @@ export type Route =
   | { name: "join" }
   | { name: "lobby" }
   | { name: "play" }
-  | { name: "result" };
+  | { name: "result" }
+  | { name: "test" };
 
 const initial: AppState = {
   route: { name: "home" },
@@ -125,6 +126,19 @@ function handleServerMessage(m: S2C): void {
 /* -------------------------- Actions -------------------------- */
 
 export function send(msg: C2S): void {
+  // In test mode, phase views' `send({t:"action", action})` calls run
+  // through the local reducer instead of the WS transport. We detect
+  // this by inspecting the current route — no environment coupling
+  // between views and infrastructure.
+  if (current.route.name === "test" && msg.t === "action") {
+    // Lazily reach into testStore to keep it out of the transport path
+    // when not in use.
+    import("./testStore").then(({ testDispatch }) => {
+      const r = testDispatch(msg.action as any);
+      if (!r.ok) setState({ toast: { text: r.error, ts: Date.now() } });
+    });
+    return;
+  }
   getTransport().send(msg);
 }
 
