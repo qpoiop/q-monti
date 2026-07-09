@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { send } from "@web/state/store";
+import { send, useStore } from "@web/state/store";
 import type {
   Card as MCard,
   MomontyView,
@@ -24,6 +24,7 @@ import "./play-trick.css";
  */
 
 const TURN_LIMIT = 15;
+const EMPTY_EVENTS_ARR: unknown[] = [];
 
 type ClsError = "form-mismatch" | "too-weak" | null;
 
@@ -115,6 +116,37 @@ function canFollowWithCard(card: MCard, form: TrickForm): boolean {
 export function PlayTrick({ view }: { view: MomontyView }) {
   const [selected, setSelected] = useState<string[]>([]);
   const hand = view.myHand ?? [];
+  // React to the shared event log so we can flash a brief "N명 자동 패스"
+  // and "파일 정리" overlay whenever the server tick tells us something
+  // interesting happened. Live rooms will produce the same events; test
+  // mode wires them through the local reducer.
+  const events = useStore((s) => s.gameView?.lastEvents ?? EMPTY_EVENTS_ARR);
+  const version = useStore((s) => s.gameView?.version ?? 0);
+  const [flash, setFlash] = useState<null | { kind: "auto-pass" | "clear" | "quad"; count?: number }>(null);
+  useEffect(() => {
+    if (!events || !Array.isArray(events)) return;
+    // Count auto-pass events in the latest batch. Fall back to a generic
+    // clear notice when the pile just cleared.
+    let autoPass = 0;
+    let clear = false;
+    let quad = false;
+    for (const e of events as any[]) {
+      if (e?.type === "autoPass") autoPass += 1;
+      if (e?.type === "quadClear") quad = true;
+      if (e?.type === "trickClear") clear = true;
+    }
+    if (autoPass > 0) {
+      setFlash({ kind: "auto-pass", count: autoPass });
+    } else if (quad) {
+      setFlash({ kind: "quad" });
+    } else if (clear) {
+      setFlash({ kind: "clear" });
+    }
+    if (autoPass || quad || clear) {
+      const id = setTimeout(() => setFlash(null), 1500);
+      return () => clearTimeout(id);
+    }
+  }, [version, events]);
   const myTurn = view.currentSeatId === view.mySeatId;
   const isLeading = view.currentTrick.form.kind === "none";
   const canPass = !isLeading;
@@ -246,6 +278,16 @@ export function PlayTrick({ view }: { view: MomontyView }) {
         form={view.currentTrick.form}
         onToggle={toggle}
       />
+
+      {flash ? (
+        <div className={`play-flash play-flash-${flash.kind}`} aria-live="polite">
+          {flash.kind === "auto-pass"
+            ? `${flash.count ?? 0}명 자동 패스 · 낼 카드 없음`
+            : flash.kind === "quad"
+            ? "🎯 쿼드 클리어 · 계속 리드"
+            : "파일 정리 · 새 리드 시작"}
+        </div>
+      ) : null}
 
       <div className="action-bar">
         {isLeading ? (

@@ -258,6 +258,7 @@ function nextSeat(state: MomontyState): void {
 
 function clearTrick(state: MomontyState): void {
   const winnerSeatId = state.currentTrick.topPlay?.seatId ?? state.currentTrick.leaderSeatId;
+  state.history.push({ type: "trickClear", seatId: winnerSeatId });
   state.currentTrick = {
     leaderSeatId: winnerSeatId,
     form: { kind: "none" },

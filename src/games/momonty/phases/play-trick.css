@@ -445,6 +445,42 @@
 
 /* -------------------------- Action bar -------------------------- */
 
+.play-flash {
+  margin-top: 4px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  text-align: center;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12.5px;
+  animation: flash-in 0.32s var(--easing) both;
+}
+.play-flash-auto-pass {
+  background: rgba(253, 164, 175, 0.14);
+  border: 1px solid rgba(253, 164, 175, 0.35);
+  color: #fecdd3;
+}
+.play-flash-quad {
+  background: linear-gradient(135deg, rgba(242, 193, 78, 0.28), rgba(242, 193, 78, 0.1));
+  border: 1px solid rgba(242, 193, 78, 0.45);
+  color: #f8d98a;
+}
+.play-flash-clear {
+  background: rgba(52, 211, 153, 0.14);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  color: #a5f3c4;
+}
+@keyframes flash-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .action-bar {
   margin-top: auto;
   display: flex;
