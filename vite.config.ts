@@ -4,6 +4,9 @@ import { fileURLToPath, URL } from "node:url";
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    sourcemap: true,
+  },
   resolve: {
     alias: {
       "@shared": fileURLToPath(new URL("./shared", import.meta.url)),

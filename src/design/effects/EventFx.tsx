@@ -13,6 +13,10 @@ import { Particles } from "./Particles";
  * overlapping events queue and play sequentially.
  */
 const FX_MS = 1600;
+// STABLE empty array — returning a new [] from the selector each call would
+// trip useSyncExternalStore into believing the snapshot changed on every
+// render (Object.is fails on new array literals) and infinite-loop.
+const EMPTY_EVENTS: unknown[] = [];
 
 type Fx =
   | { kind: "revolution" }
@@ -21,7 +25,7 @@ type Fx =
   | { kind: "matchEnd" };
 
 export function EventFx() {
-  const events = useStore((s) => s.gameView?.lastEvents ?? []);
+  const events = useStore((s) => s.gameView?.lastEvents ?? EMPTY_EVENTS);
   const version = useStore((s) => s.gameView?.version ?? 0);
   const [active, setActive] = useState<Fx | null>(null);
 
