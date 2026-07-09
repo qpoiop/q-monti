@@ -4,6 +4,11 @@ export { Room };
 export interface Env {
   ROOM: DurableObjectNamespace;
   DB: D1Database;
+  // Comma-separated list of allowed request Origins for API + WS upgrade.
+  // Set via `wrangler secret put ALLOWED_ORIGINS` — e.g.
+  //   "https://momonti.pages.dev,https://momonti.example.com".
+  // Falsy → allow all (development).
+  ALLOWED_ORIGINS?: string;
 }
 
 /**
@@ -30,6 +35,31 @@ async function callIndex(env: Env, method: string, path: string, body?: unknown)
   });
 }
 
+function allowedOrigin(req: Request, env: Env): boolean {
+  const allow = (env.ALLOWED_ORIGINS ?? "").trim();
+  if (!allow) return true; // dev / open
+  const origin = req.headers.get("origin") ?? "";
+  if (!origin) return false;
+  const list = allow.split(",").map((s) => s.trim()).filter(Boolean);
+  return list.includes(origin);
+}
+
+async function limitByIp(
+  env: Env,
+  req: Request,
+  op: string,
+  perMin: number
+): Promise<{ ok: boolean; retryInSec: number }> {
+  const ip = req.headers.get("cf-connecting-ip") ?? "0.0.0.0";
+  const res = await callIndex(env, "POST", "/rl", {
+    key: `ip:${ip}|op:${op}`,
+    limit: perMin,
+    windowSec: 60,
+  });
+  const j = (await res.json()) as { allowed: boolean; resetInMs: number };
+  return { ok: j.allowed, retryInSec: Math.ceil((j.resetInMs ?? 0) / 1000) };
+}
+
 async function resolveRoomStub(env: Env, code: string): Promise<DurableObjectStub | null> {
   const res = await callIndex(env, "GET", `/lookup?code=${encodeURIComponent(code)}`);
   if (!res.ok) return null;
@@ -50,7 +80,24 @@ export default {
 
     if (url.pathname === "/") return new Response("momonti-worker OK");
 
+    // OPTIONS pre-flight for API endpoints.
+    if (req.method === "OPTIONS") {
+      const origin = req.headers.get("origin") ?? "*";
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "access-control-allow-origin": allowedOrigin(req, env) ? origin : "null",
+          "access-control-allow-methods": "GET,POST,OPTIONS",
+          "access-control-allow-headers": "content-type",
+          "access-control-max-age": "600",
+        },
+      });
+    }
+
     if (url.pathname === "/api/newRoom" && req.method === "POST") {
+      if (!allowedOrigin(req, env)) return json({ error: "origin blocked" }, 403);
+      const rl = await limitByIp(env, req, "newRoom", 5); // 5 rooms/min/IP
+      if (!rl.ok) return json({ error: "rate limited", retryInSec: rl.retryInSec }, 429);
       const body = (await req.json()) as { gameId?: string };
       const gameId = body.gameId ?? "momonty";
       const res = await callIndex(env, "POST", "/newRoom", { gameId });
@@ -58,6 +105,9 @@ export default {
     }
 
     if (url.pathname === "/api/lookup" && req.method === "GET") {
+      if (!allowedOrigin(req, env)) return json({ error: "origin blocked" }, 403);
+      const rl = await limitByIp(env, req, "lookup", 30); // 30 lookups/min/IP
+      if (!rl.ok) return json({ error: "rate limited", retryInSec: rl.retryInSec }, 429);
       const code = url.searchParams.get("code");
       if (!code) return json({ error: "missing code" }, 400);
       const res = await callIndex(env, "GET", `/lookup?code=${encodeURIComponent(code)}`);
@@ -69,11 +119,14 @@ export default {
       if (req.headers.get("Upgrade") !== "websocket") {
         return new Response("expected websocket", { status: 400 });
       }
+      // Origin check for WS: browsers include Origin on upgrade requests.
+      if (!allowedOrigin(req, env)) return new Response("origin blocked", { status: 403 });
+      const rl = await limitByIp(env, req, "wsUpgrade", 30); // 30 upgrades/min/IP
+      if (!rl.ok) return new Response("rate limited", { status: 429 });
       const code = url.searchParams.get("code");
       if (!code) return new Response("missing code", { status: 400 });
       const stub = await resolveRoomStub(env, code);
       if (!stub) return new Response("room not found", { status: 404 });
-      // Forward the upgrade — DO returns a 101 with its own webSocket.
       return stub.fetch(req);
     }
 

@@ -53,6 +53,9 @@ interface HelloOpts {
   seedMeta?: { roomName?: string; isPrivate?: boolean; maxPlayers?: number };
 }
 
+const HEARTBEAT_MS = 25_000;
+const DEAD_PEER_MS = 45_000;
+
 export class Transport {
   private ws: WebSocket | null = null;
   private msgListeners: Listener[] = [];
@@ -62,6 +65,9 @@ export class Transport {
   private pendingHello: HelloOpts = {};
   private pending: C2S[] = [];
   private lastStatus: TransportStatus = { kind: "idle" };
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private deadCheckTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastRecvMs = 0;
 
   connect(code: string, helloOpts: HelloOpts = {}): void {
     this.armedCode = code;
@@ -119,6 +125,7 @@ export class Transport {
     this.ws = ws;
     ws.onopen = () => {
       this.reconnectAttempt = 0;
+      this.lastRecvMs = Date.now();
       this.setStatus({ kind: "connected" });
       const hello: C2S = {
         t: "hello",
@@ -130,8 +137,10 @@ export class Transport {
       this.pendingHello = {};
       for (const q of this.pending) ws.send(JSON.stringify(q));
       this.pending = [];
+      this.startHeartbeat();
     };
     ws.onmessage = (ev) => {
+      this.lastRecvMs = Date.now();
       try {
         const msg = JSON.parse(ev.data as string) as S2C;
         for (const l of this.msgListeners) l(msg);
@@ -140,6 +149,7 @@ export class Transport {
       }
     };
     ws.onclose = (ev) => {
+      this.stopHeartbeat();
       this.setStatus({ kind: "closed", reason: ev.reason });
       if (!this.armedCode) return;
       this.reconnectAttempt = Math.min(this.reconnectAttempt + 1, 5);
@@ -149,6 +159,34 @@ export class Transport {
     ws.onerror = () => {
       /* onclose handles reconnect */
     };
+  }
+
+  private startHeartbeat(): void {
+    this.stopHeartbeat();
+    this.heartbeatTimer = setInterval(() => {
+      // If we haven't heard from the server in DEAD_PEER_MS, treat the socket
+      // as dead and force-close so the reconnect flow kicks in. Prevents
+      // silent zombie connections after transient network drops.
+      if (Date.now() - this.lastRecvMs > DEAD_PEER_MS) {
+        try {
+          this.ws?.close();
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+      this.send({ t: "ping" });
+    }, HEARTBEAT_MS);
+  }
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+    if (this.deadCheckTimer) {
+      clearTimeout(this.deadCheckTimer);
+      this.deadCheckTimer = null;
+    }
   }
 }
 

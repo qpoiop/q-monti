@@ -12,6 +12,7 @@ import { Toast } from "./screens/Toast";
 import { InstallLayer } from "./screens/InstallLayer";
 import { ExitConfirm } from "./screens/ExitConfirm";
 import { RulesSheet } from "./screens/RulesSheet";
+import { EventFx } from "./design/effects/EventFx";
 import { initRouter } from "./nav/router";
 import { registerSW } from "./pwa/register";
 
@@ -45,7 +46,15 @@ export function App() {
 
   return (
     <div data-accent={accentForGame(gameId)} style={{ minHeight: "100%" }}>
-      {body}
+      <div
+        key={route.name + ("gameId" in route ? route.gameId : "")}
+        style={{
+          animation: "m-fade-in var(--dur-med) var(--easing) both",
+        }}
+      >
+        {body}
+      </div>
+      <EventFx />
       <InstallLayer />
       <ConnectionOverlay />
       <ExitConfirm />

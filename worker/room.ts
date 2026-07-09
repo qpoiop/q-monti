@@ -1,6 +1,7 @@
 import { getGame } from "@shared/games/registry";
 import { makeRng, type Seat } from "@shared/engine";
 import type { C2S, RoomStatePublic, S2C, SeatPublic } from "@shared/protocol";
+import { rateLimit } from "./rateLimit";
 
 /**
  * Durable Object — one instance per room. Same class also serves the
@@ -51,6 +52,20 @@ interface WsAttachment {
 
 const CODE_ALPHABET = "234567890QWERTYUPASDFGHJKLZXCVBNM";
 
+/**
+ * Room lifecycle knobs.
+ *
+ *   IDLE_TIMEOUT_MS       — Room self-destructs if `lastActivityMs` has not
+ *                           been updated within this window AND the room is
+ *                           either empty or all seats are offline.
+ *   ALARM_INTERVAL_MS     — Cadence at which we wake to check the above.
+ *   PING_DEAD_TIMEOUT_MS  — If a seat has been offline this long, drop the
+ *                           seat entirely (freeing its slot).
+ */
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+const ALARM_INTERVAL_MS = 5 * 60 * 1000;
+const OFFLINE_DROP_MS = 10 * 60 * 1000;
+
 export class Room {
   private meta: Meta | null = null;
   private seats: SeatPublic[] = [];
@@ -59,26 +74,47 @@ export class Room {
   private gameState: unknown = null;
   private version = 0;
   private hydrated = false;
+  private lastActivityMs = 0;
+  private seatOfflineSinceMs: Record<string, number> = {};
 
-  constructor(private readonly state: DurableObjectState, _env: unknown) {}
+  constructor(
+    private readonly state: DurableObjectState,
+    private readonly env: { ROOM: DurableObjectNamespace }
+  ) {}
 
   private async hydrate(): Promise<void> {
     if (this.hydrated) return;
-    const [meta, seats, sessionMap, config, gameState, version] = await Promise.all([
-      this.state.storage.get<Meta>("meta"),
-      this.state.storage.get<SeatPublic[]>("seats"),
-      this.state.storage.get<Record<string, SessionMapEntry>>("sessionMap"),
-      this.state.storage.get<unknown>("config"),
-      this.state.storage.get<unknown>("gameState"),
-      this.state.storage.get<number>("version"),
-    ]);
+    const [meta, seats, sessionMap, config, gameState, version, activity, offline] =
+      await Promise.all([
+        this.state.storage.get<Meta>("meta"),
+        this.state.storage.get<SeatPublic[]>("seats"),
+        this.state.storage.get<Record<string, SessionMapEntry>>("sessionMap"),
+        this.state.storage.get<unknown>("config"),
+        this.state.storage.get<unknown>("gameState"),
+        this.state.storage.get<number>("version"),
+        this.state.storage.get<number>("lastActivityMs"),
+        this.state.storage.get<Record<string, number>>("seatOfflineSinceMs"),
+      ]);
     this.meta = meta ?? null;
     this.seats = seats ?? [];
     this.sessionMap = sessionMap ?? {};
     this.config = config ?? null;
     this.gameState = gameState ?? null;
     this.version = version ?? 0;
+    this.lastActivityMs = activity ?? Date.now();
+    this.seatOfflineSinceMs = offline ?? {};
     this.hydrated = true;
+  }
+
+  private touchActivity(): void {
+    this.lastActivityMs = Date.now();
+  }
+
+  private async ensureAlarm(): Promise<void> {
+    const current = await this.state.storage.getAlarm();
+    if (current == null) {
+      await this.state.storage.setAlarm(Date.now() + ALARM_INTERVAL_MS);
+    }
   }
 
   private async persist(): Promise<void> {
@@ -89,7 +125,10 @@ export class Room {
       config: this.config,
       gameState: this.gameState,
       version: this.version,
+      lastActivityMs: this.lastActivityMs,
+      seatOfflineSinceMs: this.seatOfflineSinceMs,
     });
+    await this.ensureAlarm();
   }
 
   async fetch(req: Request): Promise<Response> {
@@ -134,6 +173,22 @@ export class Room {
       const name = code ? table.codeToName[code] : undefined;
       return json({ name: name ?? null });
     }
+    if (url.pathname === "/rl" && req.method === "POST") {
+      const rule = (await req.json()) as { key: string; limit: number; windowSec: number };
+      const decision = await rateLimit(this.state.storage, rule);
+      return json(decision);
+    }
+    if (url.pathname === "/unlink" && req.method === "POST") {
+      const { code } = (await req.json()) as { code: string };
+      const table = ((await this.state.storage.get<IndexTable>("index")) ?? {
+        codeToName: {},
+      }) as IndexTable;
+      if (table.codeToName[code]) {
+        delete table.codeToName[code];
+        await this.state.storage.put("index", table);
+      }
+      return json({ ok: true });
+    }
 
     /* ============ Room WS upgrade ============ */
     if (url.pathname === "/ws") {
@@ -164,6 +219,7 @@ export class Room {
 
   async webSocketMessage(ws: WebSocket, data: string | ArrayBuffer): Promise<void> {
     await this.hydrate();
+    this.touchActivity();
     if (typeof data !== "string") return;
     let msg: C2S;
     try {
@@ -183,7 +239,9 @@ export class Room {
       this.seats = this.seats.map((s) =>
         s.seatId === entry.seatId ? { ...s, online: false } : s
       );
+      this.seatOfflineSinceMs[entry.seatId] = Date.now();
       this.bumpVersion();
+      this.touchActivity();
       await this.persist();
       this.broadcastRoomState();
     }
@@ -191,6 +249,69 @@ export class Room {
 
   async webSocketError(ws: WebSocket): Promise<void> {
     await this.webSocketClose(ws);
+  }
+
+  /**
+   * Scheduled cleanup — runs every ALARM_INTERVAL_MS while the room exists.
+   *
+   *   1. Any seat offline > OFFLINE_DROP_MS is dropped entirely.
+   *   2. If the room is idle > IDLE_TIMEOUT_MS AND (empty OR all offline)
+   *      then the room is destroyed: all storage deleted, index unlinked,
+   *      remaining WSs closed. The alarm is not re-armed.
+   *   3. Otherwise re-arm the alarm for the next interval.
+   */
+  async alarm(): Promise<void> {
+    await this.hydrate();
+    const now = Date.now();
+
+    // 1) Drop long-offline seats.
+    const initialCount = this.seats.length;
+    this.seats = this.seats.filter((s) => {
+      const since = this.seatOfflineSinceMs[s.seatId];
+      if (!s.online && since && now - since > OFFLINE_DROP_MS) {
+        // Also purge session mappings pointing at this seat.
+        for (const [sid, entry] of Object.entries(this.sessionMap)) {
+          if (entry.seatId === s.seatId) delete this.sessionMap[sid];
+        }
+        delete this.seatOfflineSinceMs[s.seatId];
+        return false;
+      }
+      return true;
+    });
+    if (this.seats.length !== initialCount) {
+      this.bumpVersion();
+      this.broadcastRoomState();
+    }
+
+    // 2) Destroy idle+empty rooms.
+    const anyOnline = this.seats.some((s) => s.online);
+    const idleFor = now - this.lastActivityMs;
+    if (this.seats.length === 0 || (!anyOnline && idleFor > IDLE_TIMEOUT_MS)) {
+      // Close remaining WSs, unlink from index, wipe storage.
+      for (const ws of this.state.getWebSockets()) {
+        try {
+          ws.close(1000, "room expired");
+        } catch {
+          /* ignore */
+        }
+      }
+      if (this.meta?.code) {
+        try {
+          const idxStub = this.env.ROOM.get(this.env.ROOM.idFromName("index"));
+          await idxStub.fetch("https://internal/unlink", {
+            method: "POST",
+            body: JSON.stringify({ code: this.meta.code }),
+          });
+        } catch {
+          /* best-effort */
+        }
+      }
+      await this.state.storage.deleteAll();
+      return; // Do not re-arm.
+    }
+
+    // 3) Re-arm.
+    await this.persist();
   }
 
   /* ============ Message routing ============ */
@@ -204,6 +325,7 @@ export class Room {
       case "hello": {
         // Bootstrap meta from DO name on first hello.
         await this.ensureBootstrap();
+        this.touchActivity();
         const userId = msg.sessionId; // 1:1 map for now
         // Host seeds room-level meta on first connect.
         const willBeHost = this.seats.length === 0 && this.meta && !this.meta.hostUserId;
@@ -217,6 +339,7 @@ export class Room {
           this.seats = this.seats.map((s) =>
             s.seatId === existing.seatId ? { ...s, online: true } : s
           );
+          delete this.seatOfflineSinceMs[existing.seatId];
           attach.userId = existing.userId;
           attach.seatId = existing.seatId;
           ws.serializeAttachment(attach);
@@ -341,6 +464,7 @@ export class Room {
         return;
       }
       case "ping":
+        this.touchActivity();
         this.sendTo(ws, { t: "pong" });
         return;
     }
