@@ -14,9 +14,32 @@ export interface AppState {
   connection: "idle" | "connecting" | "connected" | "reconnecting" | "closed";
   room?: RoomStatePublic;
   gameView?: { view: unknown; version: number; lastEvents: unknown[] };
+  /** True while a modal overlay (tax result, revolution) is holding the
+   * screen; play-surface timers should freeze so the user isn't punished
+   * for reading the summary. */
+  overlayHold?: boolean;
   error?: string;
   toast?: { text: string; ts: number };
+  /** Room chat — ephemeral, lives from room-join to leave. */
+  chat: ChatMsg[];
+  /** Whether the chat panel is expanded. */
+  chatOpen: boolean;
+  /** Messages arrived while the panel was collapsed. */
+  chatUnread: number;
 }
+
+export interface ChatMsg {
+  id: string;
+  from: string;
+  seatId?: string;
+  text: string;
+  ts: number;
+  /** True when this client sent it — drives right-aligned bubble. */
+  self: boolean;
+}
+
+/** Keep memory bounded — only the most recent messages are retained. */
+const CHAT_MAX = 120;
 
 /** Momonty-only routes. */
 export type Route =
@@ -32,6 +55,9 @@ const initial: AppState = {
   route: { name: "home" },
   session: { sessionId: getSessionId(), displayName: getDisplayName() },
   connection: "idle",
+  chat: [],
+  chatOpen: false,
+  chatUnread: 0,
 };
 
 let current: AppState = initial;
@@ -111,7 +137,7 @@ function handleServerMessage(m: S2C): void {
           : m.room.phase === "ended"
           ? { name: "result" as const }
           : m.room.phase === "lobby" &&
-            (cur.name === "home" || cur.name === "create")
+            (cur.name === "home" || cur.name === "create" || cur.name === "join")
           ? { name: "lobby" as const }
           : cur;
       setState({ room: m.room, route: next });
@@ -126,8 +152,29 @@ function handleServerMessage(m: S2C): void {
         },
       });
       break;
-    case "chat":
+    case "chat": {
+      // Self detection: match the sender seat to the seat this client owns.
+      const mySeat = current.room?.seats.find(
+        (s) => s.userId === current.session.userId
+      );
+      const self = !!m.seatId && m.seatId === mySeat?.seatId;
+      const msg: ChatMsg = {
+        id: `${m.ts}:${m.seatId ?? m.from}:${current.chat.length}`,
+        from: m.from,
+        seatId: m.seatId,
+        text: m.text,
+        ts: m.ts,
+        self,
+      };
+      const chat = [...current.chat, msg].slice(-CHAT_MAX);
+      const chatUnread = current.chatOpen
+        ? 0
+        : self
+        ? current.chatUnread
+        : current.chatUnread + 1;
+      setState({ chat, chatUnread });
       break;
+    }
     case "error":
       setState({ error: m.message, toast: { text: m.message, ts: Date.now() } });
       break;
@@ -166,7 +213,7 @@ export async function createRoomAndJoin(args: {
   // instead of a blank pause while the HTTP round-trip runs. Previously
   // the state only changed once the WS opened, which is ~500-1500ms
   // after the tap on the CTA.
-  setState({ connection: "connecting" });
+  setState({ connection: "connecting", chat: [], chatOpen: false, chatUnread: 0 });
   const t = getTransport();
   t.close();
   try {
@@ -192,7 +239,7 @@ export async function createRoomAndJoin(args: {
 }
 
 export async function joinRoomByCode(code: string): Promise<boolean> {
-  setState({ connection: "connecting" });
+  setState({ connection: "connecting", chat: [], chatOpen: false, chatUnread: 0 });
   const t = getTransport();
   t.close();
   const { name } = await api.lookup(code.toUpperCase()).catch(() => ({ name: null }));
@@ -211,7 +258,7 @@ export function leaveRoom(): void {
   const t = getTransport();
   t.send({ t: "leaveRoom" });
   t.close();
-  setState({ room: undefined, gameView: undefined });
+  setState({ room: undefined, gameView: undefined, chat: [], chatOpen: false, chatUnread: 0 });
 }
 
 /** Attempt to reconnect to the currently-armed room. Used by overlays. */
@@ -221,6 +268,25 @@ export function retryConnection(): void {
   if (room?.code) {
     t.connect(room.code);
   }
+}
+
+/* -------------------------- Chat -------------------------- */
+
+export function sendChat(text: string): void {
+  const clean = text.replace(/\s+/g, " ").trim().slice(0, 300);
+  if (!clean) return;
+  getTransport().send({ t: "chat", text: clean });
+}
+
+export function openChat(): void {
+  setState({ chatOpen: true, chatUnread: 0 });
+}
+export function closeChat(): void {
+  setState({ chatOpen: false });
+}
+export function toggleChat(): void {
+  if (current.chatOpen) closeChat();
+  else openChat();
 }
 
 export function goto(route: Route): void {

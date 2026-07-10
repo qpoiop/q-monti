@@ -65,6 +65,8 @@ const CODE_ALPHABET = "234567890QWERTYUPASDFGHJKLZXCVBNM";
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 const ALARM_INTERVAL_MS = 5 * 60 * 1000;
 const OFFLINE_DROP_MS = 10 * 60 * 1000;
+/** Minimum gap between two chat messages from the same session. */
+const CHAT_MIN_GAP_MS = 400;
 
 export class Room {
   private meta: Meta | null = null;
@@ -76,6 +78,8 @@ export class Room {
   private hydrated = false;
   private lastActivityMs = 0;
   private seatOfflineSinceMs: Record<string, number> = {};
+  /** Ephemeral, in-memory flood-guard timestamps (sessionId -> lastChatMs). */
+  private chatLastMs: Record<string, number> = {};
 
   constructor(
     private readonly state: DurableObjectState,
@@ -197,15 +201,16 @@ export class Room {
       }
       const sessionId = url.searchParams.get("session") ?? "";
       if (!sessionId) return new Response("missing session", { status: 400 });
+      // Meta bootstrap must happen before we emit the first snapshot —
+      // otherwise the client sees code="?" until a subsequent broadcast.
+      const code = url.searchParams.get("code") ?? undefined;
+      await this.ensureBootstrap(code, "momonty");
       const pair = new WebSocketPair();
       const client = pair[0];
       const server = pair[1];
-      // Hibernating accept — DO can hibernate; messages are delivered as
-      // `webSocketMessage` events even after the isolate wakes.
       this.state.acceptWebSocket(server, [sessionId]);
       const attach: WsAttachment = { sessionId };
       server.serializeAttachment(attach);
-      // Kick off welcome + snapshot.
       this.sendTo(server, { t: "welcome", sessionId, userId: sessionId });
       this.sendTo(server, this.buildRoomState());
       const v = this.buildGameView(sessionId);
@@ -440,6 +445,23 @@ export class Room {
       case "action": {
         const entry = this.sessionMap[attach.sessionId];
         if (!entry || !this.meta || !this.gameState) return;
+        // Room-wide flow gates — RANK_REVEAL and ROUND_END pause on a
+        // human confirm. Restricting these to the host prevents a rushed
+        // seat from advancing the round before everyone reads the tier
+        // results. Any other action stays seat-local (only the acting
+        // seat can play a card, etc.).
+        const a = msg.action as { t: string };
+        if (
+          (a.t === "confirmRanks" || a.t === "confirmRoundEnd") &&
+          !this.isHost(attach.sessionId)
+        ) {
+          this.sendTo(ws, {
+            t: "error",
+            message: "호스트만 다음 라운드로 넘어갈 수 있어요",
+            code: "HOST_ONLY",
+          });
+          return;
+        }
         const game = getGame(this.meta.gameId);
         const seed = `${this.meta.code}:${this.version}:${entry.seatId}`;
         const rng = makeRng(seed);
@@ -463,6 +485,23 @@ export class Room {
         }
         return;
       }
+      case "chat": {
+        const entry = this.sessionMap[attach.sessionId];
+        if (!entry) return;
+        // Trim, collapse to a hard cap, drop empties. Chat is ephemeral —
+        // never persisted — so no storage write, just a fan-out.
+        const text = (msg.text ?? "").replace(/\s+/g, " ").trim().slice(0, 300);
+        if (!text) return;
+        // Naive per-session flood guard: ignore bursts faster than the
+        // window. In-memory only; resets on hibernate, which is fine.
+        const now = Date.now();
+        const last = this.chatLastMs[attach.sessionId] ?? 0;
+        if (now - last < CHAT_MIN_GAP_MS) return;
+        this.chatLastMs[attach.sessionId] = now;
+        this.touchActivity();
+        this.broadcastChat(entry.displayName, entry.seatId, text, now);
+        return;
+      }
       case "ping":
         this.touchActivity();
         this.sendTo(ws, { t: "pong" });
@@ -472,9 +511,16 @@ export class Room {
 
   /* ============ Helpers ============ */
 
-  private async ensureBootstrap(): Promise<void> {
+  private async ensureBootstrap(code?: string, gameId?: string): Promise<void> {
     if (this.meta) return;
-    const name = this.state.id.name;
+    // Prefer explicit code from the /ws URL — some runtimes (miniflare in
+    // certain configs) don't populate state.id.name for idFromName(...) IDs,
+    // which would leave meta.code as "?". Falling back to state.id.name
+    // keeps the original behavior for platforms that do provide it.
+    const name =
+      code && gameId
+        ? `room-${code}-${gameId}-boot`
+        : this.state.id.name;
     if (!name) return;
     // Reach index DO through storage — not possible cross-DO without env.
     // Instead, callers write to `pendingRooms` at code creation time; here
@@ -574,6 +620,13 @@ export class Room {
       this.sendTo(ws, { t: "gameView", view, events, version: this.version });
     }
     this.broadcastRoomState();
+  }
+
+  private broadcastChat(from: string, seatId: string, text: string, ts: number): void {
+    const msg: S2C = { t: "chat", from, seatId, text, ts };
+    for (const ws of this.state.getWebSockets()) {
+      this.sendTo(ws, msg);
+    }
   }
 
   private sendTo(ws: WebSocket, msg: unknown): void {

@@ -6,8 +6,9 @@ import { DesktopStage } from "./DesktopStage";
 import { Aurora } from "@web/design/effects/Aurora";
 import { Particles } from "@web/design/effects/Particles";
 import { MatchEnd } from "@web/games/momonty/phases/MatchEnd";
-import { ScreenBody, FooterBar } from "@web/design/layout";
+import { ScreenBody, FooterBar, HeaderActions } from "@web/design/layout";
 import type { MomontyView } from "@shared/games/momonty/logic";
+import { ChatDock, ChatToggle } from "./ChatDock";
 
 /**
  * Result surface for live rooms — wraps the shared MatchEnd phase view
@@ -21,7 +22,14 @@ export function ResultScreen() {
       <PhoneFrame gradient="radial-gradient(85% 46% at 50% 8%, rgba(242,193,78,.3), transparent 60%)">
         <Aurora tone="gold" />
         <Particles variant="crown-rain" density={1.2} />
-        <ScreenHeader title="매치 결과" />
+        <ScreenHeader
+          title="매치 결과"
+          right={
+            <HeaderActions>
+              <ChatToggle />
+            </HeaderActions>
+          }
+        />
         <ScreenBody>
           {view ? (
             <MatchEnd view={view} />
@@ -50,6 +58,7 @@ export function ResultScreen() {
             한 판 더 ▶
           </Button>
         </FooterBar>
+        <ChatDock />
       </PhoneFrame>
     </DesktopStage>
   );

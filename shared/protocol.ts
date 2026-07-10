@@ -31,7 +31,7 @@ export type S2C =
   | { t: "roomCreated"; code: string }
   | { t: "roomState"; room: RoomStatePublic }
   | { t: "gameView"; view: unknown; events: unknown[]; version: number }
-  | { t: "chat"; from: string; text: string }
+  | { t: "chat"; from: string; seatId?: string; text: string; ts: number }
   | { t: "error"; message: string; code?: string }
   | { t: "pong" };
 
