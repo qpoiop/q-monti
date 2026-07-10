@@ -76,7 +76,7 @@ export function initTest(opts: { seatCount?: number; config?: any } = {}): void 
     version: 1,
     actingSeatId: state.seatOrder[0],
     seatNames: Object.fromEntries(seats.map((s) => [s.seatId, s.displayName])),
-    autoBots: true,
+    autoBots: false,
   };
   notify();
 }
@@ -105,38 +105,17 @@ export function testDispatch(
       action,
       rng,
     });
-    // Auto-advance the acting seat when the phase makes it obvious
-    // (e.g. PLAYING follows `currentSeatIdx`).
-    const nextActing =
-      state.phase === "PLAYING"
-        ? state.seatOrder[state.currentSeatIdx]
-        : state.phase === "DRAWING_RANK"
-        ? // Prefer any seat that hasn't drawn yet, else stay.
-          state.seatOrder.find((s) => state.drawRank?.picks?.[s] == null) ??
-          current.actingSeatId
-        : state.phase === "TAXATION"
-        ? // Prefer any seat still owing tax.
-          state.seatOrder.find(
-            (s) =>
-              (state.taxation.pendingUploads[s] ?? 0) > 0 ||
-              (state.taxation.pendingReturns[s] ?? 0) > 0
-          ) ?? current.actingSeatId
-        : current.actingSeatId;
-
-    // Commit the human's action first so the tester sees their own
-    // move land, then run bot turns one at a time on a timer. Previous
-    // implementation drained sync — the tester had no window to watch
-    // each seat's card get played before control snapped back.
-    // Bot loop should return control to the seat that just dispatched
-    // (the tester's active seat), NOT to nextActing — otherwise we'd
-    // immediately hand control back to whichever bot is up next.
+    // Manual test mode: never auto-advance actingSeatId. The tester
+    // picks each seat via the seat picker themselves so they can walk
+    // any seat's screen at any time. Auto-bot loop below still uses
+    // engine state to decide who moves next.
     const humanSeatId = current.actingSeatId;
     current = {
       ...current,
       state: { ...state },
       events,
       version: current.version + 1,
-      actingSeatId: nextActing,
+      actingSeatId: current.actingSeatId,
     };
     notify();
     mirrorToGlobalStore();
@@ -346,64 +325,32 @@ export function setActingSeat(seatId: string): void {
 }
 
 /**
- * Hand the current seat off to the bot policy — plays autonomous turns
- * for the viewer's seat as well as every other seat until the round
- * ends or the match is over. Useful for smoke-testing multi-round
- * transitions and match end without hand-playing each turn.
+ * Fire the bot policy for whichever seat is currently acting. Used by
+ * the turn timer's expiry callback in test mode so a stalled seat still
+ * advances even when the viewer isn't watching that seat's screen.
  */
-export function runBotForHuman(): void {
+export function autoTurnTimeout(): void {
   if (!current) return;
-  let state = current.state;
-  const events: unknown[] = [];
-  const startRound = state.round;
-  let consecutivePasses = 0;
-  for (let step = 0; step < 400; step++) {
-    if (state.phase === "MATCH_END") break;
-    if (state.round !== startRound) break;
-    // Detect stalls — if every seat has already passed the maximum
-    // number of times in a row that's possible, the pile must be stuck.
-    // Bail so a single click can't spin for 400 steps.
-    if (consecutivePasses >= state.seatOrder.length * 4) break;
-    const activeSeat = seatToDrive(state, current.actingSeatId);
-    if (!activeSeat) break;
-    const bot = botAction(state, activeSeat);
-    if (!bot) break;
-    if (bot.t === "pass") consecutivePasses++;
-    else consecutivePasses = 0;
-    const rng = makeRng(`test:hand-off:${current.version}:${step}:${activeSeat}`);
-    try {
-      const result = momontyGame.reduce({
-        state,
-        seatId: activeSeat,
-        action: bot,
-        rng,
-      });
-      state = result.state;
-      for (const e of result.events) events.push(e);
-    } catch {
-      try {
-        const rng2 = makeRng(`test:hand-off-pass:${current.version}:${step}:${activeSeat}`);
-        const result = momontyGame.reduce({
-          state,
-          seatId: activeSeat,
-          action: { t: "pass" },
-          rng: rng2,
-        });
-        state = result.state;
-        for (const e of result.events) events.push(e);
-      } catch {
-        break;
-      }
-    }
+  const state = current.state;
+  if (state.phase !== "PLAYING") return;
+  const seatId = state.seatOrder[state.currentSeatIdx];
+  if (!seatId) return;
+  const action = botAction(state, seatId);
+  if (!action) return;
+  const rng = makeRng(`test:timeout:${current.version}:${seatId}`);
+  try {
+    const result = momontyGame.reduce({ state, seatId, action, rng });
+    current = {
+      ...current,
+      state: { ...result.state },
+      events: result.events,
+      version: current.version + 1,
+    };
+    notify();
+    mirrorToGlobalStore();
+  } catch {
+    // Illegal action — ignore, user will need to intervene.
   }
-  current = {
-    ...current,
-    state: { ...state },
-    events,
-    version: current.version + 1,
-  };
-  notify();
-  mirrorToGlobalStore();
 }
 
 function mirrorToGlobalStore(): void {
@@ -456,6 +403,6 @@ function emptyState(): TestState {
     version: 0,
     actingSeatId: "",
     seatNames: {},
-    autoBots: true,
+    autoBots: false,
   };
 }
