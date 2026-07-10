@@ -5,7 +5,6 @@ import { DesktopStage } from "./DesktopStage";
 import {
   initTest,
   resetTest,
-  runBotForHuman,
   setActingSeat,
   useTest,
   viewForSeat,
@@ -17,6 +16,8 @@ import { FooterBar, HeaderActions, ScreenBody, SectionLabel, StatusBadge, RulesB
 import { openRules } from "./RulesSheet";
 import { momontyGame } from "@shared/games/momonty/logic";
 import { ConfirmDialog } from "@web/design/ConfirmDialog";
+import { Aurora } from "@web/design/effects/Aurora";
+import { Particles } from "@web/design/effects/Particles";
 import "./test.css";
 
 /**
@@ -346,7 +347,15 @@ function TestPlay() {
 
   return (
     <DesktopStage>
-      <PhoneFrame gradient="radial-gradient(90% 40% at 50% 0%, rgba(242,193,78,.16), transparent 60%)">
+      <PhoneFrame gradient={rawState.phase === "MATCH_END"
+        ? "radial-gradient(85% 46% at 50% 8%, rgba(242,193,78,.32), transparent 60%)"
+        : "radial-gradient(90% 40% at 50% 0%, rgba(242,193,78,.16), transparent 60%)"}>
+        {rawState.phase === "MATCH_END" ? (
+          <>
+            <Aurora tone="gold" />
+            <Particles variant="crown-rain" density={1.2} />
+          </>
+        ) : null}
         <ScreenHeader
           title={`R${view.round}/${view.match.targetRounds} · ${spec.label}`}
           onBack={() => setConfirmLeave(true)}
@@ -362,14 +371,6 @@ function TestPlay() {
         <div className="test-seat-picker-wrap">
           <div className="test-seat-picker-label">
             🧪 테스트 · 좌석 전환
-            <button
-              type="button"
-              className="test-run-bot"
-              onClick={() => runBotForHuman()}
-              title="현재 좌석의 이번 라운드 전체를 봇에게 넘김"
-            >
-              ▶ 봇에게 넘기기
-            </button>
           </div>
           <div className="test-seat-picker">
             {rawState.seatOrder.map((seatId) => (
@@ -394,12 +395,21 @@ function TestPlay() {
         </div>
         <RoundBanner phase={rawState.phase} round={view.round} />
         <ScreenBody>
-          <PhaseView view={view} key={`${version}-${acting}-${spec.id}`} />
+          <PhaseView view={view} key={spec.id} />
         </ScreenBody>
         {rawState.phase === "MATCH_END" ? (
           <FooterBar>
-            <Button full variant="ghost" onClick={() => resetTest()}>
-              🧪 새 테스트
+            <Button
+              full
+              variant="ghost"
+              onClick={() => {
+                if (navigator.share) navigator.share({ text: "모몬티 매치 결과" }).catch(() => {});
+              }}
+            >
+              결과 공유
+            </Button>
+            <Button full variant="primary" onClick={() => resetTest()}>
+              한 판 더 ▶
             </Button>
           </FooterBar>
         ) : null}

@@ -160,8 +160,15 @@ export class Transport {
     };
     ws.onclose = (ev) => {
       this.stopHeartbeat();
+      // Intentional close() clears armedCode first. The socket's async
+      // onclose then fires — if we blindly set "closed" here it clobbers the
+      // "idle" that close() set, stranding the connection overlay (and its
+      // dead buttons) over the home screen after leaving a room.
+      if (!this.armedCode) {
+        this.setStatus({ kind: "idle" });
+        return;
+      }
       this.setStatus({ kind: "closed", reason: ev.reason });
-      if (!this.armedCode) return;
       this.reconnectAttempt = Math.min(this.reconnectAttempt + 1, 5);
       const delay = Math.min(1000 * 2 ** (this.reconnectAttempt - 1), 8000);
       setTimeout(() => this.open(), delay);

@@ -74,11 +74,15 @@ export function closeExitConfirm(): void {
  * proceed with the navigation (typically after the user confirms).
  */
 type BackGuard = (proceed: () => void) => boolean;
-let backGuard: BackGuard | null = null;
+// Stack, not a single slot: a sheet can open over a screen that already
+// installed a guard (lobby back→home, live match, etc.). The topmost guard
+// handles the back gesture; popping it on close reveals the one beneath.
+let backGuards: BackGuard[] = [];
 export function installBackGuard(g: BackGuard | null): () => void {
-  backGuard = g;
+  if (!g) return () => {};
+  backGuards.push(g);
   return () => {
-    if (backGuard === g) backGuard = null;
+    backGuards = backGuards.filter((x) => x !== g);
   };
 }
 
@@ -179,53 +183,73 @@ export function navigate(r: Route, opts: { replace?: boolean } = {}): void {
   goto(effective);
 }
 
+// Tracks the URL the store last committed. Module-level (not a closure in
+// initRouter) so pushHistory can keep it in lockstep — otherwise navigate()
+// pushes once and the subscribe below pushes a *second* identical entry,
+// leaving a duplicate that swallows the first Back press.
+let lastPath = "/";
+
 function pushHistory(r: Route, replace = false): void {
   const path = routeToPath(r);
   const state = { [STATE_KEY]: r };
   if (replace) history.replaceState(state, "", path);
   else history.pushState(state, "", path);
+  lastPath = path;
 }
 
 export function initRouter(): void {
   const initialPath = window.location.pathname || "/";
   const initialRoute = guard(pathToRoute(initialPath));
   history.replaceState({ [STATE_KEY]: initialRoute }, "", routeToPath(initialRoute));
+  lastPath = routeToPath(initialRoute);
   goto(initialRoute);
 
   window.addEventListener("popstate", (ev) => {
     const raw = (ev.state && ev.state[STATE_KEY]) as Route | undefined;
     const target = raw ?? pathToRoute(window.location.pathname || "/");
     const effective = guard(target);
-    // Route-installed guard takes precedence so an in-progress screen
-    // can intercept the back gesture (test mode, live match, etc.).
-    if (backGuard) {
+    // Topmost installed guard takes precedence so an in-progress screen or
+    // an open sheet can intercept the back gesture (test mode, live match,
+    // settings sheet, etc.).
+    const topGuard = backGuards[backGuards.length - 1];
+    if (topGuard) {
       const path = routeToPath(getState().route);
       const proceed = () => {
-        installBackGuard(null);
+        backGuards = backGuards.filter((g) => g !== topGuard);
         history.back();
       };
-      const consumed = backGuard(proceed);
+      const consumed = topGuard(proceed);
       if (consumed) {
         // Put the current route back on top of the stack so hitting back
         // again while the confirm is still open re-triggers this handler.
         history.pushState({ [STATE_KEY]: getState().route }, "", path);
+        lastPath = path;
         return;
       }
     }
-    if (effective.name === "home" && target.name === "home" && exitConfirmOpen === false) {
+    // Only treat back as an app-exit when we're *already* on home. Backing
+    // into home from another screen (/test, /create, …) should just show the
+    // home screen, not pop the exit dialog.
+    if (
+      getState().route.name === "home" &&
+      effective.name === "home" &&
+      target.name === "home" &&
+      exitConfirmOpen === false
+    ) {
       emitConfirm(true);
       history.pushState({ [STATE_KEY]: { name: "home" } }, "", "/");
+      lastPath = "/";
       return;
     }
     if (routeToPath(effective) !== routeToPath(target)) {
       history.replaceState({ [STATE_KEY]: effective }, "", routeToPath(effective));
     }
+    lastPath = routeToPath(effective);
     syncingFromHistory = true;
     goto(effective);
     syncingFromHistory = false;
   });
 
-  let lastPath = routeToPath(getState().route);
   subscribe(() => {
     if (syncingFromHistory) return;
     const cur = getState().route;

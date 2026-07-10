@@ -15,7 +15,7 @@
  */
 .stage {
   width: 100vw;
-  height: 100dvh;
+  height: 100svh;
   display: flex;
   justify-content: center;
   align-items: stretch;
@@ -30,12 +30,12 @@
    *   We keep max-width 440 for readability on tablets,
    *   and cap height at 720 so tall viewports don't stretch the shell
    *   into an ugly slab.
-   *   height: min(100dvh, aspect-derived) — width scales down if the
+   *   height: min(100svh, aspect-derived) — width scales down if the
    *   window is narrower than 440.
    */
   max-width: 440px;
-  height: min(100dvh, 720px);
-  max-height: 100dvh;
+  height: min(100svh, 720px);
+  max-height: 100svh;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -47,7 +47,7 @@
   .screen-shell {
     width: 100%;
     max-width: 100%;
-    height: min(100dvh, calc(100vw * 620 / 260));
+    height: min(100svh, calc(100vw * 620 / 260));
   }
 }
 .screen-content {
@@ -64,7 +64,7 @@
     align-items: center;
   }
   .screen-shell {
-    height: min(880px, calc(100dvh - 32px));
+    height: min(880px, calc(100svh - 32px));
     border-radius: 32px;
     margin: clamp(16px, 3vh, 40px) 0;
   }
@@ -158,6 +158,10 @@
   flex: 1;
   min-height: 0;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.screen-body::-webkit-scrollbar {
+  display: none;
 }
 .screen-body-tight {
   padding: 8px 18px 0;
@@ -359,6 +363,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+/* Only the gradient ring spins — the emoji sits in the static parent so it
+ * no longer tumbles around with the sweep. */
+.spinner-ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 50%;
   background: conic-gradient(
     from 0turn,
     var(--accent-1) 0deg,
@@ -371,12 +384,20 @@
   content: "";
   position: absolute;
   inset: 4px;
+  z-index: 1;
   border-radius: 50%;
   background: var(--surface-2);
 }
+.spinner-ring.warning::after {
+  animation: spin 0.7s linear infinite;
+  filter: hue-rotate(-40deg) saturate(1.4);
+}
+.spinner-ring.warning {
+  animation: timer-warn-blink 0.9s ease-in-out infinite;
+}
 .spinner-emoji {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   font-size: 26px;
   animation: emoji-pulse 1.4s ease-in-out infinite;
 }
@@ -395,6 +416,10 @@
   to {
     transform: rotate(360deg);
   }
+}
+@keyframes timer-warn-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 @keyframes emoji-pulse {
   0%, 100% {
