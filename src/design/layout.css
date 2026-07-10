@@ -70,6 +70,26 @@
   }
 }
 
+/* -------------------------- Buttons -------------------------- */
+
+/* Immediate press feedback so a tap doesn't feel dead while the
+ * screen waits for the next state commit. Also nukes the default
+ * outline blob mobile browsers paint after a tap. */
+.prim-btn {
+  cursor: pointer;
+  border: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  will-change: transform;
+}
+.prim-btn:not(:disabled):active {
+  transform: scale(0.97);
+}
+.prim-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 /* -------------------------- Structural -------------------------- */
 
 .stack {

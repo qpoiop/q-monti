@@ -162,28 +162,45 @@ export async function createRoomAndJoin(args: {
   maxPlayers: number;
   config?: unknown;
 }): Promise<void> {
+  // Flip to connecting IMMEDIATELY so the button gets a spinner overlay
+  // instead of a blank pause while the HTTP round-trip runs. Previously
+  // the state only changed once the WS opened, which is ~500-1500ms
+  // after the tap on the CTA.
+  setState({ connection: "connecting" });
   const t = getTransport();
   t.close();
-  const { code } = await api.newRoom("momonty");
-  setState({ toast: { text: `방 코드: ${code}`, ts: Date.now() } });
-  t.connect(code, {
-    seedMeta: {
-      roomName: args.roomName,
-      isPrivate: args.isPrivate,
-      maxPlayers: args.maxPlayers,
-    },
-  });
-  if (args.config != null) {
-    t.send({ t: "setConfig", config: args.config });
+  try {
+    const { code } = await api.newRoom("momonty");
+    setState({ toast: { text: `방 코드: ${code}`, ts: Date.now() } });
+    t.connect(code, {
+      seedMeta: {
+        roomName: args.roomName,
+        isPrivate: args.isPrivate,
+        maxPlayers: args.maxPlayers,
+      },
+    });
+    if (args.config != null) {
+      t.send({ t: "setConfig", config: args.config });
+    }
+  } catch (e) {
+    setState({
+      connection: "closed",
+      toast: { text: "방을 만들지 못했어요. 다시 시도해 주세요.", ts: Date.now() },
+    });
+    throw e;
   }
 }
 
 export async function joinRoomByCode(code: string): Promise<boolean> {
+  setState({ connection: "connecting" });
   const t = getTransport();
   t.close();
   const { name } = await api.lookup(code.toUpperCase()).catch(() => ({ name: null }));
   if (!name) {
-    setState({ toast: { text: "방을 찾을 수 없어요", ts: Date.now() } });
+    setState({
+      connection: "idle",
+      toast: { text: "방을 찾을 수 없어요", ts: Date.now() },
+    });
     return false;
   }
   t.connect(code.toUpperCase());

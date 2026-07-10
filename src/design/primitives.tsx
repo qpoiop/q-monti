@@ -87,6 +87,7 @@ export function Button({
       type="button"
       onClick={onClick}
       disabled={disabled || loading}
+      className="prim-btn"
       style={{ ...base, ...variants[variant], ...style }}
     >
       {loading ? "…" : children}
