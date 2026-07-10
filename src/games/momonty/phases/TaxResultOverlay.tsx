@@ -32,6 +32,15 @@ export function TaxResultOverlay() {
     }
   }, [version, events, visible]);
 
+  useEffect(() => {
+    if (!open) return;
+    // Turn timer is already ticking behind this scrim — auto-dismiss
+    // after 5s so a distracted user doesn't hand the whole first turn
+    // away to the timeout.
+    const id = window.setTimeout(() => setOpen(null), 5000);
+    return () => window.clearTimeout(id);
+  }, [open]);
+
   if (!open) return null;
 
   const nameOf = (seatId: string) =>

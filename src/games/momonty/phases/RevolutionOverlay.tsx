@@ -18,7 +18,8 @@ export function RevolutionOverlay() {
     for (const e of events as any[]) {
       if (e?.type === "revolution") {
         setOpen({ great: !!e.payload?.great, actorName: e.payload?.actorName });
-        const id = setTimeout(() => setOpen(null), 2600);
+        // 5s cap — turn timer is still counting behind the scrim.
+        const id = setTimeout(() => setOpen(null), 5000);
         return () => clearTimeout(id);
       }
     }

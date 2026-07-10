@@ -92,8 +92,8 @@
 /* Timer ring — conic-gradient pie clipped to a circle. Percentage
  * driven by a CSS custom property so the countdown can animate. */
 .timer-ring {
-  width: 52px;
-  height: 52px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: conic-gradient(
     var(--accent-1) calc(var(--timer-pct, 1) * 360deg),
@@ -107,29 +107,30 @@
   transition: background var(--dur-fast) linear;
 }
 .timer-ring-inner {
-  width: 42px;
-  height: 42px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   background: var(--surface-1);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 1px;
   color: #fff;
   font-family: var(--font-brand);
   font-weight: 800;
+  white-space: nowrap;
 }
 .timer-value {
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1;
   letter-spacing: -0.02em;
 }
 .timer-unit {
-  font-size: 10px;
+  font-size: 11px;
   opacity: 0.7;
   line-height: 1;
-  align-self: flex-end;
-  margin-bottom: 2px;
+  align-self: center;
+  margin-top: 5px;
 }
 .timer-ring.expired {
   background: conic-gradient(var(--neg-1) 360deg, transparent 0);

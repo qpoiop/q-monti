@@ -42,11 +42,21 @@ export function getSessionId(): string {
   }
   return sid;
 }
-export function getDisplayName(fallback = "게스트"): string {
-  return localStorage.getItem(KEY_NAME) || fallback;
+export function getDisplayName(fallback?: string): string {
+  const stored = localStorage.getItem(KEY_NAME);
+  if (stored) return stored;
+  const generated = fallback ?? generateDefaultNickname();
+  localStorage.setItem(KEY_NAME, generated);
+  return generated;
 }
 export function setDisplayName(name: string): void {
   localStorage.setItem(KEY_NAME, name);
+}
+function generateDefaultNickname(): string {
+  // "무난이" + 4 random digits so first-time visitors don't all show up as
+  // "게스트". The suffix is stable across sessions once written.
+  const suffix = String(Math.floor(1000 + Math.random() * 9000));
+  return `무난이${suffix}`;
 }
 
 interface HelloOpts {

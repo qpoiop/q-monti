@@ -268,6 +268,43 @@ export function PlayTrick({ view }: { view: MomontyView }) {
     send({ t: "action", action: { t: "pass" } });
   };
 
+  /**
+   * Timeout auto-action for the current seat.
+   * - Following: pass.
+   * - Leading: dump the weakest single (highest numbered value); if the
+   *   hand is jesters-only, dump one jester as value 12. Leader can't
+   *   pass by rule, so we HAVE to play something to keep the round
+   *   moving. Never leaves the seat stuck at 0s.
+   */
+  const doTimeout = () => {
+    if (!myTurn) return;
+    if (isLeading) {
+      const numbered = hand.filter((c) => c.value != null) as (MCard & { value: number })[];
+      if (numbered.length > 0) {
+        let weakest = numbered[0];
+        for (const c of numbered) if (c.value > weakest.value) weakest = c;
+        send({
+          t: "action",
+          action: {
+            t: "playCards",
+            cardIds: [weakest.id],
+            wildAsValue: weakest.value,
+          },
+        });
+        return;
+      }
+      const jester = hand.find((c) => c.value == null);
+      if (jester) {
+        send({
+          t: "action",
+          action: { t: "playCards", cardIds: [jester.id], wildAsValue: 12 },
+        });
+      }
+      return;
+    }
+    doPass();
+  };
+
   const requirementText = (() => {
     const f = view.currentTrick.form;
     if (f.kind === "none") return null;
@@ -319,7 +356,7 @@ export function PlayTrick({ view }: { view: MomontyView }) {
         myTurn={myTurn}
         seatKey={view.currentSeatId ?? ""}
         limitSec={view.config.turnLimitSec}
-        onTimeout={canPass && myTurn ? doPass : undefined}
+        onTimeout={myTurn ? doTimeout : undefined}
       />
       <OpponentStrip view={view} />
 
@@ -477,19 +514,26 @@ function PlayHeader({
 }) {
   const limit = Math.max(5, Math.floor(limitSec));
   const [remaining, setRemaining] = useState(limit);
-  const seatRef = useRef(seatKey);
   const firedRef = useRef(false);
+  // Store latest callback in a ref so useEffect doesn't re-run every
+  // render — react closures made it easy to accidentally reset the
+  // ticker on every parent state bump, which is why "타임아웃되도
+  // 턴 넘어가기는 안 됐다" the timer expired but the auto-pass never
+  // fired.
+  const onTimeoutRef = useRef(onTimeout);
   useEffect(() => {
-    // Reset on turn change (seat) OR when the limit itself changes.
-    seatRef.current = seatKey;
+    onTimeoutRef.current = onTimeout;
+  }, [onTimeout]);
+  useEffect(() => {
     firedRef.current = false;
     setRemaining(limit);
     const id = setInterval(() => {
       setRemaining((r) => {
         if (r <= 1) {
-          if (!firedRef.current && onTimeout) {
+          if (!firedRef.current && onTimeoutRef.current) {
             firedRef.current = true;
-            queueMicrotask(onTimeout);
+            const cb = onTimeoutRef.current;
+            queueMicrotask(() => cb());
           }
           return 0;
         }
@@ -497,7 +541,7 @@ function PlayHeader({
       });
     }, 1000);
     return () => clearInterval(id);
-  }, [seatKey, limit, onTimeout]);
+  }, [seatKey, limit]);
   const pct = remaining / limit;
   const expired = remaining === 0;
   return (
