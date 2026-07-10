@@ -915,25 +915,49 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
 
 /* -------------------------- Round end -------------------------- */
 
+function rankDelta(rank: Rank): number {
+  switch (rank) {
+    case "GRAND_MOMONTY": return 2;
+    case "MOMONTY": return 1;
+    case "MERCHANT": return 0;
+    case "PEON": return -1;
+    case "GRAND_PEON": return -2;
+  }
+}
+
 function endRound(state: MomontyState, rng: Rng, events: GameEvent[]): void {
   const seats = state.seatOrder;
   const ranks = assignRanks(state.outOrder, seats, state.taxation.greatRevolution);
 
-  // Score: momonty tiers gain rounds, peon tiers lose.
+  // Score: momonty tiers gain rounds, peon tiers lose. Apply the delta
+  // directly to state.scoreByUser (seatId === userId in this build) so
+  // the client can render a running total without needing a separate DO
+  // aggregator.
   for (const seatId of seats) {
     const rank = ranks[seatId];
-    // Find user id by seat lookup — we don't store it here, so use ranks scoreByUser via mapping in reduce level.
-    // To keep this clean, we defer score to the DO layer that owns seat→user mapping.
-    // We record events; DO applies to match score.
-    events.push({ type: "roundResult", actorSeatId: seatId, payload: { rank } });
+    const delta = rankDelta(rank);
+    if (delta !== 0) {
+      state.scoreByUser[seatId] = (state.scoreByUser[seatId] ?? 0) + delta;
+    }
+    events.push({
+      type: "roundResult",
+      actorSeatId: seatId,
+      payload: { rank, delta },
+    });
   }
 
-  // Jester penalty for lingering wilds.
+  // Jester penalty for lingering wilds — -2 per jester in hand.
   if (state.config.jesterPenalty) {
     for (const [seatId, hand] of Object.entries(state.hands)) {
       const j = hand.filter((c) => c.value === null).length;
-      if (j > 0)
-        events.push({ type: "jesterPenalty", actorSeatId: seatId, payload: { count: j } });
+      if (j > 0) {
+        state.scoreByUser[seatId] = (state.scoreByUser[seatId] ?? 0) - 2 * j;
+        events.push({
+          type: "jesterPenalty",
+          actorSeatId: seatId,
+          payload: { count: j, penalty: -2 * j },
+        });
+      }
     }
   }
 

@@ -82,6 +82,25 @@ export function EventFx() {
       ? "라운드 종료"
       : "매치 종료";
 
+  const bgFor = (kind: Fx["kind"]): string => {
+    if (kind === "quad") {
+      return "radial-gradient(65% 55% at 50% 42%, rgba(242,193,78,.42), transparent 65%), radial-gradient(80% 80% at 50% 50%, rgba(200,85,240,.14), transparent 70%)";
+    }
+    if (kind === "revolution") {
+      return "radial-gradient(70% 60% at 50% 42%, rgba(200,85,240,.42), transparent 65%)";
+    }
+    return "radial-gradient(70% 60% at 50% 42%, rgba(255,255,255,.14), transparent 65%)";
+  };
+  const gradientText: React.CSSProperties =
+    active.kind === "quad"
+      ? {
+          background: "linear-gradient(135deg, #ffe6a0, #f2c14e 40%, #c855f0)",
+          WebkitBackgroundClip: "text",
+          backgroundClip: "text",
+          color: "transparent",
+        }
+      : { color: "#fff" };
+
   return (
     <div
       aria-hidden
@@ -90,26 +109,63 @@ export function EventFx() {
         inset: 0,
         pointerEvents: "none",
         zIndex: 240,
+        background: bgFor(active.kind),
+        animation: "m-fade-in 0.28s var(--easing)",
       }}
     >
       <Particles variant={variant as any} density={1.5} />
       <div
         style={{
           position: "absolute",
-          top: "42%",
+          top: "40%",
           left: 0,
           right: 0,
           textAlign: "center",
-          color: "#fff",
           fontFamily: "var(--font-brand)",
           fontWeight: 900,
-          fontSize: 32,
-          textShadow: "0 6px 30px rgba(0,0,0,.7)",
-          animation: "m-pop var(--dur-med) var(--easing) both",
+          fontSize: 44,
+          letterSpacing: "0.02em",
+          textShadow: "0 8px 40px rgba(0,0,0,.8), 0 0 22px rgba(242,193,78,.4)",
+          animation: "quad-pop 1.6s var(--easing) both",
+          ...gradientText,
         }}
       >
         {label}
       </div>
+      <div
+        style={{
+          position: "absolute",
+          top: "calc(40% + 60px)",
+          left: 0,
+          right: 0,
+          textAlign: "center",
+          fontFamily: "var(--font-body)",
+          fontWeight: 700,
+          fontSize: 12,
+          color: "#f8d98a",
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          opacity: 0.85,
+          animation: "m-fade-in 0.5s var(--easing) both 0.15s",
+        }}
+      >
+        {active.kind === "quad"
+          ? "QUAD CLEAR · 계속 리드"
+          : active.kind === "revolution"
+          ? "REVOLUTION"
+          : active.kind === "roundEnd"
+          ? "ROUND END"
+          : "MATCH END"}
+      </div>
+      <style>{`
+        @keyframes quad-pop {
+          0% { opacity: 0; transform: scale(0.65) rotate(-4deg); }
+          20% { opacity: 1; transform: scale(1.1) rotate(2deg); }
+          40% { transform: scale(1) rotate(0deg); }
+          85% { opacity: 1; }
+          100% { opacity: 0; transform: scale(1.05); }
+        }
+      `}</style>
     </div>
   );
 }

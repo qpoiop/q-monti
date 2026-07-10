@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { patchState } from "./store";
 import { momontyGame } from "@shared/games/momonty/logic";
 import type {
   Card,
@@ -138,7 +139,7 @@ export function testDispatch(
       actingSeatId: nextActing,
     };
     notify();
-    void mirrorToGlobalStore();
+    mirrorToGlobalStore();
     if (current.autoBots) {
       scheduleBotStep(humanSeatId);
     }
@@ -191,7 +192,7 @@ function scheduleBotStep(humanSeatId: string, immediate = false): void {
       if (bot.t === "pass") botConsecutivePasses++;
       else botConsecutivePasses = 0;
       notify();
-      void mirrorToGlobalStore();
+      mirrorToGlobalStore();
     } catch {
       // Illegal move — hand control back to human rather than looping.
       return;
@@ -341,7 +342,7 @@ export function setActingSeat(seatId: string): void {
   if (!current) return;
   current = { ...current, actingSeatId: seatId };
   notify();
-  void mirrorToGlobalStore();
+  mirrorToGlobalStore();
 }
 
 /**
@@ -402,12 +403,18 @@ export function runBotForHuman(): void {
     version: current.version + 1,
   };
   notify();
-  void mirrorToGlobalStore();
+  mirrorToGlobalStore();
 }
 
-async function mirrorToGlobalStore(): Promise<void> {
+function mirrorToGlobalStore(): void {
+  // Sync mirror — must land in the same render as the local testStore
+  // notify() so the shared overlays (TaxResultOverlay, RevolutionOverlay,
+  // HistorySheet) see the fresh events on the SAME commit as PlayTrick.
+  // Previously this was async via `import("./store")`, which pushed the
+  // gameView update one microtask later. PlayTrick rendered without the
+  // matching overlay for a frame, then the overlay popped on top — that
+  // was the "데이터가 비어있다가 버벅이면서 나타나는" flicker.
   if (!current) return;
-  const { patchState } = await import("./store");
   const view = viewForSeat(current.actingSeatId);
   patchState({
     gameView: {

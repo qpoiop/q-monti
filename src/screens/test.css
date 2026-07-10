@@ -103,24 +103,30 @@
 /* -------------------------- Round banner -------------------------- */
 
 .round-banner {
-  position: absolute;
+  position: fixed;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  z-index: 20;
-  animation: round-banner-fade 1.8s var(--easing);
+  z-index: 260;
+  background:
+    radial-gradient(60% 45% at 50% 42%, rgba(242, 193, 78, 0.28), transparent 65%),
+    radial-gradient(80% 80% at 50% 55%, rgba(200, 85, 240, 0.16), transparent 70%),
+    rgba(6, 4, 15, 0.55);
+  animation: round-banner-fade 2.2s var(--easing);
+  backdrop-filter: blur(4px);
 }
 .round-banner-card {
-  padding: 26px 34px;
+  padding: 30px 38px;
   border-radius: 26px;
-  background: linear-gradient(135deg, rgba(242, 193, 78, 0.36), rgba(200, 85, 240, 0.24));
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, rgba(242, 193, 78, 0.55), rgba(200, 85, 240, 0.4));
+  border: 2px solid rgba(255, 255, 255, 0.34);
   backdrop-filter: blur(14px);
   text-align: center;
   color: #fff;
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 26px 60px -14px rgba(200, 85, 240, 0.55),
+    0 0 0 6px rgba(242, 193, 78, 0.14);
 }
 .round-banner-eyebrow {
   font-family: var(--font-brand);

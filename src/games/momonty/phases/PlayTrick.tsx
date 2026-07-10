@@ -127,12 +127,23 @@ function countJesters(hand: MCard[]): number {
  *
  * Only top 3 tips returned; excessive suggestions clutter the frame.
  */
+/**
+ * Suggests every playable set combo for the current seat. Includes
+ * plain (no jester) plays AND jester-backed builds. Straights are
+ * still out of scope for the panel to keep the frame compact.
+ *
+ * Leader: any same-value group of size 1..4.
+ * Follower: only combos whose value beats the current form and whose
+ *   size matches the form (single↔single, pair↔pair, …). Wild fills
+ *   the gap when the numbered stack is short.
+ *
+ * Top tip is rendered as a visual card build; remaining ones as
+ * compact chips. All chips tap-set the target card ids so the tester
+ * doesn't have to hunt-and-peck across the hand strip.
+ */
 function computeWildTips(hand: MCard[], form: TrickForm, great: boolean): WildTip[] {
-  const jesters = hand.filter((c) => c.value === null);
-  if (jesters.length === 0) return [];
-  // Straights are complex; skip for now — set-based suggestions are the
-  // dominant case in play, and the wild banner should stay compact.
   if (form.kind === "straight") return [];
+  const jesters = hand.filter((c) => c.value === null);
   const targetSize =
     form.kind === "single" ? 1 :
     form.kind === "pair" ? 2 :
@@ -152,24 +163,55 @@ function computeWildTips(hand: MCard[], form: TrickForm, great: boolean): WildTi
       const beats = great ? v > threshold : v < threshold;
       if (!beats) continue;
     }
-    const cap = form.kind === "none" ? 4 : targetSize;
-    const maxWith = Math.min(cap, cards.length + jesters.length);
-    if (maxWith < 2) continue; // singletons aren't a "wild build" tip
-    const wildNeeded = Math.max(0, maxWith - cards.length);
-    if (wildNeeded === 0) continue; // no jester used, not a wild tip
-    if (wildNeeded > jesters.length) continue;
-    tips.push({
-      value: v,
-      size: maxWith,
-      baseCount: maxWith - wildNeeded,
-      wildCount: wildNeeded,
-      cardIds: [...cards.slice(0, maxWith - wildNeeded), ...jesters.slice(0, wildNeeded)].map(
-        (c) => c.id
-      ),
-    });
+    if (form.kind === "none") {
+      // Leader: expose every size from 1 up to the largest achievable
+      // (max 4 = quad). Smallest first so the weaker plays surface as
+      // the recommended default per basic strategy.
+      const maxAchievable = Math.min(4, cards.length + jesters.length);
+      for (let s = 1; s <= maxAchievable; s++) {
+        const wildNeeded = Math.max(0, s - cards.length);
+        if (wildNeeded > jesters.length) continue;
+        const baseCount = s - wildNeeded;
+        tips.push({
+          value: v,
+          size: s,
+          baseCount,
+          wildCount: wildNeeded,
+          cardIds: [
+            ...cards.slice(0, baseCount),
+            ...jesters.slice(0, wildNeeded),
+          ].map((c) => c.id),
+        });
+      }
+    } else {
+      // Follower: only combos that match the form size exactly.
+      if (targetSize < 1) continue;
+      const needed = targetSize;
+      const wildNeeded = Math.max(0, needed - cards.length);
+      if (wildNeeded > jesters.length) continue;
+      const baseCount = needed - wildNeeded;
+      tips.push({
+        value: v,
+        size: needed,
+        baseCount,
+        wildCount: wildNeeded,
+        cardIds: [
+          ...cards.slice(0, baseCount),
+          ...jesters.slice(0, wildNeeded),
+        ].map((c) => c.id),
+      });
+    }
   }
-  tips.sort((a, b) => b.size - a.size || a.value - b.value);
-  return tips.slice(0, 3);
+  // Cheapest surrender first: for a leader that means smallest set of
+  // the weakest (highest-value) card. For a follower, highest v that
+  // still beats the threshold (least strong beat).
+  tips.sort((a, b) => {
+    if (form.kind === "none") {
+      return b.value - a.value || a.size - b.size;
+    }
+    return b.value - a.value;
+  });
+  return tips.slice(0, 6);
 }
 
 function canFollowWithCard(card: MCard, form: TrickForm): boolean {
@@ -365,9 +407,11 @@ export function PlayTrick({ view }: { view: MomontyView }) {
       {wildTips.length > 0 ? (
         <div className="wild-hint">
           <div className="wild-hint-head">
-            <span className="wild-hint-eyebrow">★ 와일드 모드</span>
+            <span className="wild-hint-eyebrow">
+              {countJesters(hand) > 0 ? "★ 와일드 · 낼 수 있는 조합" : "낼 수 있는 조합"}
+            </span>
             <span className="wild-hint-sub">
-              광대 {countJesters(hand)}장 · 조합 힌트
+              탭하면 자동 선택
             </span>
           </div>
           <button
@@ -548,7 +592,7 @@ function PlayHeader({
     <div className="play-header">
       <span className={`turn-pill ${myTurn ? "on" : "off"}`}>
         {myTurn ? <span className="turn-dot" /> : null}
-        {myTurn ? (isLeading ? "내 리드 차례" : "내 차례") : "상대 차례"}
+        {myTurn ? "내 차례" : "상대 차례"}
       </span>
       <div
         className={`timer-ring ${expired ? "expired" : ""}`}
@@ -591,6 +635,8 @@ function OpponentStrip({ view }: { view: MomontyView }) {
             <div className="opp-count">
               {isOut ? (
                 <span className="opp-out-tag">완주</span>
+              ) : passed ? (
+                <span className="opp-pass-tag">패스</span>
               ) : (
                 <>🂠<span>{count}</span></>
               )}
@@ -704,7 +750,7 @@ function SelectedPreview({
         <span className="sel-pill-status">{status}</span>
       </div>
       <div className="sel-mini">
-        {cls.cards.map((c) => (
+        {sortForDisplay(cls).map((c) => (
           <span key={c.id} className={`sel-mini-card ${c.value == null ? "wild" : ""}`}>
             {c.value ?? "★"}
           </span>
@@ -712,6 +758,46 @@ function SelectedPreview({
       </div>
     </div>
   );
+}
+
+/**
+ * Selected preview should read left-to-right in the natural order for
+ * the combo — straights ascend from startValue, sets stay clustered.
+ * Previously we rendered in tap order which showed 9-7-8 for a 7-8-9
+ * straight when the user tapped 9 first.
+ */
+function sortForDisplay(cls: Classification): MCard[] {
+  if (cls.kind === "straight") {
+    // Assign each numbered card to its target rank ascending; jesters
+    // fill the gaps at the appropriate positions.
+    const numbered = cls.cards
+      .filter((c) => c.value != null)
+      .slice()
+      .sort((a, b) => (a.value ?? 0) - (b.value ?? 0));
+    const jesters = cls.cards.filter((c) => c.value == null);
+    const out: MCard[] = [];
+    let jIdx = 0;
+    for (let i = 0; i < cls.size; i++) {
+      const target = cls.value + i;
+      const nextNumbered = numbered[0];
+      if (nextNumbered && nextNumbered.value === target) {
+        out.push(nextNumbered);
+        numbered.shift();
+      } else if (jIdx < jesters.length) {
+        out.push(jesters[jIdx++]);
+      } else if (nextNumbered) {
+        // Fallback — shouldn't happen if classify() approved the combo.
+        out.push(nextNumbered);
+        numbered.shift();
+      }
+    }
+    return out;
+  }
+  // Same-value sets: keep numbered cards first, wilds at the end.
+  return [
+    ...cls.cards.filter((c) => c.value != null),
+    ...cls.cards.filter((c) => c.value == null),
+  ];
 }
 
 function PassBanner() {

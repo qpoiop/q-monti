@@ -63,18 +63,24 @@ export function RoundEnd({ view }: { view: MomontyView }) {
       </div>
 
       <div className="rank-list">
-        {rows.map(({ seatId, rank, name }, i) => (
-          <div key={seatId} className="rank-row" data-tier={RANK_TIER_CLASS[rank]}>
-            <span className="rank-avatar">{RANK_ICON[rank]}</span>
-            <span className="rank-name">
-              <span>{name}</span>
-              <span className="rank-role">{RANK_LABEL_KO[rank]}</span>
-              {seatId === view.mySeatId ? <span className="rank-me-tag">나</span> : null}
-              {rank === "GRAND_MOMONTY" ? <span className="lead-tag">선</span> : null}
-            </span>
-            <span className="rank-pos">{i + 1}위</span>
-          </div>
-        ))}
+        {rows.map(({ seatId, rank, name }, i) => {
+          const score = view.scoreByUser?.[seatId] ?? 0;
+          return (
+            <div key={seatId} className="rank-row" data-tier={RANK_TIER_CLASS[rank]}>
+              <span className="rank-avatar">{RANK_ICON[rank]}</span>
+              <span className="rank-name">
+                <span>{name}</span>
+                <span className="rank-role">{RANK_LABEL_KO[rank]}</span>
+                {seatId === view.mySeatId ? <span className="rank-me-tag">나</span> : null}
+                {rank === "GRAND_MOMONTY" ? <span className="lead-tag">선</span> : null}
+              </span>
+              <span className="rank-score" data-sign={score > 0 ? "pos" : score < 0 ? "neg" : "zero"}>
+                {score > 0 ? `+${score}` : score}
+              </span>
+              <span className="rank-pos">{i + 1}위</span>
+            </div>
+          );
+        })}
       </div>
 
       {!isReveal && jesterPenaltyOn ? (

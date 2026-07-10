@@ -188,6 +188,15 @@
   font-weight: 800;
   font-size: 10px;
 }
+.opp-pass-tag {
+  color: #fda4af;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 10px;
+}
+.opp-cell[data-passed="true"] {
+  opacity: 0.55;
+}
 .opp-lead-chip {
   padding: 0 5px;
   border-radius: 999px;
@@ -378,19 +387,34 @@
 /* -------------------------- Pile -------------------------- */
 
 .pile-empty {
-  border-radius: 16px;
-  padding: 20px 16px;
+  border-radius: 20px;
+  padding: 32px 18px;
   border: 1.5px dashed var(--accent-border);
   background:
-    radial-gradient(60% 100% at 50% 100%, rgba(242, 193, 78, 0.1), transparent 70%),
+    radial-gradient(70% 100% at 50% 100%, rgba(242, 193, 78, 0.12), transparent 70%),
+    radial-gradient(60% 80% at 50% 0%, rgba(200, 85, 240, 0.06), transparent 60%),
     rgba(255, 255, 255, 0.02);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 120px;
+  gap: 8px;
+  min-height: 180px;
   position: relative;
+}
+.pile-empty-icon {
+  font-size: 34px;
+  opacity: 0.55;
+}
+.pile-empty-title {
+  color: var(--accent-1);
+  font-family: var(--font-brand);
+  font-size: 15px;
+  font-weight: 800;
+}
+.pile-empty-hint {
+  color: var(--text-5);
+  font-size: 12px;
 }
 .pile-empty-icon {
   font-size: 24px;

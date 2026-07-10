@@ -105,6 +105,31 @@
   background: var(--glass-2);
   flex: none;
 }
+.rank-score {
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 12px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  min-width: 38px;
+  text-align: center;
+  flex: none;
+}
+.rank-score[data-sign="pos"] {
+  color: #a5f3c4;
+  background: rgba(52, 211, 153, 0.14);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+.rank-score[data-sign="neg"] {
+  color: #fda4af;
+  background: rgba(253, 164, 175, 0.14);
+  border: 1px solid rgba(253, 164, 175, 0.3);
+}
+.rank-score[data-sign="zero"] {
+  color: var(--text-5);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
 .rank-role {
   color: var(--text-5);
   font-family: var(--font-brand);
