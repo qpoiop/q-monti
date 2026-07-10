@@ -203,17 +203,16 @@ export function PlayTrick({ view }: { view: MomontyView }) {
       if (e?.type === "quadClear") quad = true;
       if (e?.type === "trickClear") clear = true;
     }
-    if (autoPass > 0) {
-      setFlash({ kind: "auto-pass", count: autoPass });
-    } else if (quad) {
-      setFlash({ kind: "quad" });
-    } else if (clear) {
-      setFlash({ kind: "clear" });
-    }
-    if (autoPass || quad || clear) {
-      const id = setTimeout(() => setFlash(null), 1500);
-      return () => clearTimeout(id);
-    }
+    // Nothing new — leave the existing flash alone (its own timer will
+    // clear it). Previously we set a fresh timeout on every version bump
+    // and its cleanup killed the ORIGINAL timeout, which is why the quad
+    // clear text got stranded when bots kept dispatching in the interim.
+    if (!(autoPass || quad || clear)) return;
+    if (autoPass > 0) setFlash({ kind: "auto-pass", count: autoPass });
+    else if (quad) setFlash({ kind: "quad" });
+    else if (clear) setFlash({ kind: "clear" });
+    const id = window.setTimeout(() => setFlash(null), 1500);
+    return () => window.clearTimeout(id);
   }, [version, events]);
   const myTurn = view.currentSeatId === view.mySeatId;
   const isLeading = view.currentTrick.form.kind === "none";
