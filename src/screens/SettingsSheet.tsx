@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useStore, send } from "@web/state/store";
+import { installBackGuard } from "@web/nav/router";
 import { SettingRow, Stepper, Toggle } from "@web/design/primitives";
 import { Hint } from "@web/design/layout";
 import "./settings-sheet.css";
@@ -39,6 +40,16 @@ export function SettingsSheet() {
       window.removeEventListener("keydown", onKey);
     };
   }, []);
+
+  // While the sheet is open, the browser/OS back gesture should close it —
+  // not fall through to the router and exit the app.
+  useEffect(() => {
+    if (!open) return;
+    return installBackGuard(() => {
+      setOpen(false);
+      return true;
+    });
+  }, [open]);
 
   if (!open || !room) return null;
   const config = (room.config ?? {}) as Record<string, unknown>;

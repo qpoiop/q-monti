@@ -9,6 +9,7 @@ import type {
 } from "@shared/games/rules";
 import { RULEBOOKS } from "@shared/games/rules";
 import { PlayingCard } from "@web/design/PlayingCard";
+import { installBackGuard } from "@web/nav/router";
 import "./rules.css";
 
 /**
@@ -45,6 +46,15 @@ export function RulesSheet() {
       window.removeEventListener("keydown", onKey);
     };
   }, []);
+
+  // Back gesture closes the sheet instead of falling through to the router.
+  useEffect(() => {
+    if (!openedGameId) return;
+    return installBackGuard(() => {
+      setOpenedGameId(null);
+      return true;
+    });
+  }, [openedGameId]);
 
   if (!openedGameId) return null;
   const rb = RULEBOOKS[openedGameId];
