@@ -8,6 +8,7 @@ import { PLAY_GRADIENTS, PLAY_VIEWS } from "@web/games/registry";
 import { ScreenBody, Hint, HeaderActions, RulesButton } from "@web/design/layout";
 import { openRules } from "./RulesSheet";
 import { ConfirmDialog } from "@web/design/ConfirmDialog";
+import { ChatDock, ChatToggle } from "./ChatDock";
 
 /**
  * Live play surface. Wraps the phase view with a slim header so the
@@ -49,11 +50,13 @@ export function PlayScreen() {
           onBack={() => setConfirmLeave(true)}
           right={
             <HeaderActions>
+              <ChatToggle />
               <RulesButton onClick={() => openRules(room.gameId)} />
             </HeaderActions>
           }
         />
         <View view={view} />
+        <ChatDock />
       </PhoneFrame>
       <ConfirmDialog
         open={confirmLeave}

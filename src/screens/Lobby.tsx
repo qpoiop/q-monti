@@ -8,6 +8,7 @@ import { FooterBar, Hint, HeaderActions, Row, RulesButton, ScreenBody, Stack } f
 import { openRules } from "./RulesSheet";
 import { openSettings } from "./SettingsSheet";
 import { send } from "@web/state/store";
+import { ChatDock, ChatToggle } from "./ChatDock";
 
 /**
  * Lobby derives readiness + host controls from `room.seats`. Nothing in the
@@ -62,6 +63,7 @@ export function LobbyScreen() {
           }}
           right={
             <HeaderActions>
+              <ChatToggle />
               <RulesButton onClick={() => openRules(room.gameId)} />
               <span className="small" style={{ color: "var(--text-5)" }}>
                 {room.seats.length}/{room.maxPlayers}
@@ -132,6 +134,7 @@ export function LobbyScreen() {
             {primary.label}
           </Button>
         </FooterBar>
+        <ChatDock />
       </PhoneFrame>
     </DesktopStage>
   );
