@@ -1,7 +1,8 @@
+import { useEffect } from "react";
 import { PhoneFrame } from "@web/design/PhoneFrame";
 import { Button, Card, Pill, ScreenHeader } from "@web/design/primitives";
 import { leaveRoom, useStore } from "@web/state/store";
-import { navigate } from "@web/nav/router";
+import { installBackGuard, navigate } from "@web/nav/router";
 import { DesktopStage } from "./DesktopStage";
 import type { SeatPublic } from "@shared/protocol";
 import { FooterBar, Hint, HeaderActions, Row, RulesButton, ScreenBody, Stack } from "@web/design/layout";
@@ -18,6 +19,23 @@ import { ChatDock, ChatToggle } from "./ChatDock";
 export function LobbyScreen() {
   const room = useStore((s) => s.room);
   const userId = useStore((s) => s.session.userId);
+  // Browser back from the lobby lands on the stale /create form otherwise —
+  // the room is created but never left. Consume the back gesture and, once
+  // the popstate handler has finished restacking, leave the room and go
+  // home. The defer matters: the handler re-pushes the *current* route after
+  // a consumed guard, so navigating synchronously here would desync the URL
+  // from the route. A microtask runs after that restack settles.
+  useEffect(
+    () =>
+      installBackGuard(() => {
+        queueMicrotask(() => {
+          leaveRoom();
+          navigate({ name: "home" });
+        });
+        return true;
+      }),
+    []
+  );
   if (!room) {
     return (
       <DesktopStage>
