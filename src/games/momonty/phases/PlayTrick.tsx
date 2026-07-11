@@ -5,6 +5,7 @@ import type {
   MomontyView,
   TrickForm,
 } from "@shared/games/momonty/logic";
+import { OutOverlay } from "./OutOverlay";
 import "./play-trick.css";
 
 /**
@@ -141,7 +142,7 @@ function countJesters(hand: MCard[]): number {
  * compact chips. All chips tap-set the target card ids so the tester
  * doesn't have to hunt-and-peck across the hand strip.
  */
-function computeWildTips(hand: MCard[], form: TrickForm, great: boolean): WildTip[] {
+function computeWildTips(hand: MCard[], form: TrickForm, great: boolean, cardMax = 12): WildTip[] {
   if (form.kind === "straight") return [];
   const jesters = hand.filter((c) => c.value === null);
   const targetSize =
@@ -158,15 +159,20 @@ function computeWildTips(hand: MCard[], form: TrickForm, great: boolean): WildTi
     byValue.set(c.value, arr);
   }
   const tips: WildTip[] = [];
-  for (const [v, cards] of byValue.entries()) {
-    if (threshold != null) {
-      const beats = great ? v > threshold : v < threshold;
-      if (!beats) continue;
-    }
+  const beatsThreshold = (v: number): boolean => {
+    if (threshold == null) return true;
+    return great ? v > threshold : v < threshold;
+  };
+  // Iterate every possible target value (1..cardMax), not just the ones
+  // sitting in hand. Lets jester-only plays surface when they'd beat the
+  // pile — previously we skipped these because byValue didn't include v.
+  for (let v = 1; v <= cardMax; v++) {
+    if (!beatsThreshold(v)) continue;
+    const cards = byValue.get(v) ?? [];
+    // Wild has to combo with a numbered card — a solo jester is worthless
+    // (auto-13 rule), so we only generate tips anchored on real cards.
+    if (cards.length === 0) continue;
     if (form.kind === "none") {
-      // Leader: expose every size from 1 up to the largest achievable
-      // (max 4 = quad). Smallest first so the weaker plays surface as
-      // the recommended default per basic strategy.
       const maxAchievable = Math.min(4, cards.length + jesters.length);
       for (let s = 1; s <= maxAchievable; s++) {
         const wildNeeded = Math.max(0, s - cards.length);
@@ -184,7 +190,6 @@ function computeWildTips(hand: MCard[], form: TrickForm, great: boolean): WildTi
         });
       }
     } else {
-      // Follower: only combos that match the form size exactly.
       if (targetSize < 1) continue;
       const needed = targetSize;
       const wildNeeded = Math.max(0, needed - cards.length);
@@ -202,16 +207,30 @@ function computeWildTips(hand: MCard[], form: TrickForm, great: boolean): WildTi
       });
     }
   }
-  // Cheapest surrender first: for a leader that means smallest set of
-  // the weakest (highest-value) card. For a follower, highest v that
-  // still beats the threshold (least strong beat).
-  tips.sort((a, b) => {
-    if (form.kind === "none") {
-      return b.value - a.value || a.size - b.size;
+  // Post-process:
+  //   - Dedupe per value keeping the largest size; a rec of both 11×3
+  //     and 11×2 for the same hand is redundant, the smaller is strictly
+  //     a subset.
+  let processed = tips;
+  const bestByValue = new Map<number, WildTip>();
+  for (const t of processed) {
+    const cur = bestByValue.get(t.value);
+    if (
+      !cur ||
+      t.size > cur.size ||
+      (t.size === cur.size && t.wildCount < cur.wildCount)
+    ) {
+      bestByValue.set(t.value, t);
     }
-    return b.value - a.value;
+  }
+  processed = [...bestByValue.values()];
+  // Weakest cards first (higher value = weaker in Momonti); within a
+  // value, larger sets preferred so peons dump their thickest bricks,
+  // and among ties fewer wilds so jesters stay in reserve.
+  processed.sort((a, b) => {
+    return b.value - a.value || b.size - a.size || a.wildCount - b.wildCount;
   });
-  return tips.slice(0, 6);
+  return processed.slice(0, 6);
 }
 
 function canFollowWithCard(card: MCard, form: TrickForm): boolean {
@@ -258,6 +277,7 @@ export function PlayTrick({ view }: { view: MomontyView }) {
   }, [version, events]);
   const myTurn = view.currentSeatId === view.mySeatId;
   const isLeading = view.currentTrick.form.kind === "none";
+  const isMyOut = !!view.mySeatId && (view.myHand?.length ?? 999) === 0;
   const canPass = !isLeading;
   const seatNames = view.seatNames ?? {};
 
@@ -268,7 +288,7 @@ export function PlayTrick({ view }: { view: MomontyView }) {
   const formError = cls ? checkAgainstForm(view.currentTrick.form, cls, view.taxation.greatRevolution) : null;
   const hasWild = selectedCards.some((c) => c.value === null);
   const wildTips = useMemo(
-    () => (myTurn ? computeWildTips(hand, view.currentTrick.form, view.taxation.greatRevolution) : []),
+    () => (myTurn ? computeWildTips(hand, view.currentTrick.form, view.taxation.greatRevolution, view.config.cardMax) : []),
     [hand, view.currentTrick.form, view.taxation.greatRevolution, myTurn]
   );
   const submitOk =
@@ -312,14 +332,26 @@ export function PlayTrick({ view }: { view: MomontyView }) {
 
   /**
    * Timeout auto-action for the current seat.
-   * - Following: pass.
-   * - Leading: dump the weakest single (highest numbered value); if the
-   *   hand is jesters-only, dump one jester as value 12. Leader can't
-   *   pass by rule, so we HAVE to play something to keep the round
-   *   moving. Never leaves the seat stuck at 0s.
+   * - If there's at least one recommended combo, submit the top tip
+   *   (weakest value + largest size). Feels smarter than blind pass.
+   * - Otherwise: leaders dump the weakest single (highest numbered
+   *   value); followers pass. Leader can't legally pass, so we always
+   *   have to play something to keep the round moving.
    */
   const doTimeout = () => {
     if (!myTurn) return;
+    if (wildTips.length > 0) {
+      const top = wildTips[0];
+      send({
+        t: "action",
+        action: {
+          t: "playCards",
+          cardIds: top.cardIds,
+          wildAsValue: top.value,
+        },
+      });
+      return;
+    }
     if (isLeading) {
       const numbered = hand.filter((c) => c.value != null) as (MCard & { value: number })[];
       if (numbered.length > 0) {
@@ -393,74 +425,70 @@ export function PlayTrick({ view }: { view: MomontyView }) {
 
   return (
     <div className="play-trick">
+      <OutOverlay view={view} />
       <PlayHeader
         isLeading={isLeading}
         myTurn={myTurn}
         seatKey={view.currentSeatId ?? ""}
         limitSec={view.config.turnLimitSec}
-        onTimeout={myTurn ? doTimeout : undefined}
+        onTimeout={
+          myTurn
+            ? doTimeout
+            : () => {
+                // Test mode fallback: viewer isn't the acting seat but
+                // the round still needs to advance. Route to the local
+                // test store; live rooms do nothing (server drives).
+                import("@web/state/testStore").then(({ autoTurnTimeout, getTestState }) => {
+                  if (getTestState()) autoTurnTimeout();
+                });
+              }
+        }
       />
       <OpponentStrip view={view} />
 
       {requirementText ? <div className="req-pill">{requirementText}</div> : null}
 
-      {wildTips.length > 0 ? (
-        <div className="wild-hint">
-          <div className="wild-hint-head">
-            <span className="wild-hint-eyebrow">
-              {countJesters(hand) > 0 ? "★ 와일드 · 낼 수 있는 조합" : "낼 수 있는 조합"}
-            </span>
-            <span className="wild-hint-sub">
-              탭하면 자동 선택
-            </span>
-          </div>
+      {isLeading ? <EmptyPile /> : <PileBox view={view} seatNames={seatNames} />}
+
+      {wildTips.length > 0 && myTurn ? (
+        <div className="tip-row">
           <button
             type="button"
-            className="wild-build"
+            className={`tip-top ${wildTips[0].wildCount > 0 ? "with-wild" : ""}`}
             onClick={() => setSelected(wildTips[0].cardIds)}
           >
-            <span className="wild-build-label">
-              내 세트 만들기 · {wildTips[0].value}={wildTips[0].value} (
-              {wildTips[0].baseCount}장 + 광대 {wildTips[0].wildCount})
+            <span className="tip-top-label">
+              {wildTips[0].wildCount > 0 ? "와일드 추천조합" : "추천 조합"} ·{" "}
+              <b>{wildTips[0].value}</b>
+              <span className="tip-top-x">×{wildTips[0].size}</span>
             </span>
-            <span className="wild-build-cards">
+            <span className="tip-top-cards">
               {Array.from({ length: wildTips[0].baseCount }).map((_, i) => (
-                <span key={`b${i}`} className="wild-build-card">
+                <span key={`b${i}`} className="tip-mini">
                   {wildTips[0].value}
                 </span>
               ))}
-              <span className="wild-build-plus">+</span>
               {Array.from({ length: wildTips[0].wildCount }).map((_, i) => (
-                <span key={`w${i}`} className="wild-build-card wild">
-                  ★<span className="wild-build-eq">={wildTips[0].value}</span>
+                <span key={`w${i}`} className="tip-mini wild">
+                  ★
                 </span>
               ))}
             </span>
           </button>
-          {wildTips.length > 1 ? (
-            <div className="wild-hint-alts">
-              <span className="wild-hint-alts-label">다른 조합</span>
-              {wildTips.slice(1).map((t, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className="wild-hint-chip"
-                  onClick={() => setSelected(t.cardIds)}
-                >
-                  <span className="wild-hint-lead">
-                    {t.value}×{t.size}
-                  </span>
-                  <span className="wild-hint-tail">
-                    {t.baseCount}장 + ★{t.wildCount}
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : null}
+          {wildTips.slice(1, 4).map((t, i) => (
+            <button
+              key={i}
+              type="button"
+              className={`tip-alt ${t.wildCount > 0 ? "with-wild" : ""}`}
+              onClick={() => setSelected(t.cardIds)}
+            >
+              {t.value}
+              <span className="tip-alt-x">×{t.size}</span>
+              {t.wildCount > 0 ? <span className="tip-alt-wild">★{t.wildCount}</span> : null}
+            </button>
+          ))}
         </div>
       ) : null}
-
-      {isLeading ? <EmptyPile /> : <PileBox view={view} seatNames={seatNames} />}
 
       {/* Reserved slot — always occupies space so the layout doesn't jump. */}
       <div className="sel-slot">
@@ -474,6 +502,17 @@ export function PlayTrick({ view }: { view: MomontyView }) {
         ) : null}
       </div>
 
+      {!myTurn && !isMyOut ? (
+        <div className="waiting-band" aria-live="polite">
+          <span className="waiting-dot" />
+          <span className="waiting-name">
+            {view.currentSeatId
+              ? seatNames[view.currentSeatId] ?? view.currentSeatId.slice(-4)
+              : "다음 참가자"}
+          </span>
+          <span className="waiting-label">차례 · 기다리는 중…</span>
+        </div>
+      ) : null}
       <div className="hand-label">
         내 손패 <b>{hand.length}장</b> · 같은 숫자끼리 묶임
       </div>
@@ -483,6 +522,7 @@ export function PlayTrick({ view }: { view: MomontyView }) {
         form={view.currentTrick.form}
         onToggle={toggle}
         sortMode={sortMode}
+        disabled={!myTurn}
       />
 
       {flash ? (
@@ -495,7 +535,9 @@ export function PlayTrick({ view }: { view: MomontyView }) {
         </div>
       ) : null}
 
-      {passBanner ? <PassBanner /> : null}
+      {(passBanner || (!!view.mySeatId && view.currentTrick.passSeatIds.includes(view.mySeatId))) ? (
+        <PassBanner />
+      ) : null}
 
       <div className="action-bar">
         {isLeading ? (
@@ -557,49 +599,62 @@ function PlayHeader({
   onTimeout?: () => void;
 }) {
   const limit = Math.max(5, Math.floor(limitSec));
-  const [remaining, setRemaining] = useState(limit);
+  const limitMs = limit * 1000;
+  const [remainingMs, setRemainingMs] = useState(limitMs);
   const firedRef = useRef(false);
-  // Store latest callback in a ref so useEffect doesn't re-run every
-  // render — react closures made it easy to accidentally reset the
-  // ticker on every parent state bump, which is why "타임아웃되도
-  // 턴 넘어가기는 안 됐다" the timer expired but the auto-pass never
-  // fired.
+  const paused = useStore((s) => !!s.overlayHold);
   const onTimeoutRef = useRef(onTimeout);
   useEffect(() => {
     onTimeoutRef.current = onTimeout;
   }, [onTimeout]);
   useEffect(() => {
+    // requestAnimationFrame-driven countdown gives a smooth 60fps
+    // progress instead of the previous 1s step-jumps in the ring. Also
+    // resets on seat/overlay changes, so the ring starts fresh whenever
+    // the actionable turn changes hands.
     firedRef.current = false;
-    setRemaining(limit);
-    const id = setInterval(() => {
-      setRemaining((r) => {
-        if (r <= 1) {
-          if (!firedRef.current && onTimeoutRef.current) {
-            firedRef.current = true;
-            const cb = onTimeoutRef.current;
-            queueMicrotask(() => cb());
-          }
-          return 0;
+    setRemainingMs(limitMs);
+    if (paused) return;
+    let rafId = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const left = Math.max(0, limitMs - (now - start));
+      setRemainingMs(left);
+      if (left <= 0) {
+        if (!firedRef.current && onTimeoutRef.current) {
+          firedRef.current = true;
+          const cb = onTimeoutRef.current;
+          queueMicrotask(() => cb());
         }
-        return r - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [seatKey, limit]);
-  const pct = remaining / limit;
-  const expired = remaining === 0;
+        return;
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [seatKey, limitMs, paused]);
+  const pct = remainingMs / limitMs;
+  const expired = remainingMs <= 0;
+  const seconds = Math.ceil(remainingMs / 1000);
+  const warning = !expired && remainingMs <= 5000;
   return (
     <div className="play-header">
-      <span className={`turn-pill ${myTurn ? "on" : "off"}`}>
+      <span
+        className={`turn-pill ${myTurn ? "on" : "off"} ${isLeading && myTurn ? "lead" : ""}`}
+      >
         {myTurn ? <span className="turn-dot" /> : null}
-        {myTurn ? "내 차례" : "상대 차례"}
+        {myTurn
+          ? isLeading
+            ? "내 리드 차례"
+            : "내 차례"
+          : "상대 차례"}
       </span>
       <div
-        className={`timer-ring ${expired ? "expired" : ""}`}
+        className={`timer-ring ${expired ? "expired" : ""} ${warning ? "warning" : ""}`}
         style={{ ["--timer-pct" as any]: pct }}
       >
         <div className="timer-ring-inner">
-          <span className="timer-value">{remaining}</span>
+          <span className="timer-value">{seconds}</span>
           <span className="timer-unit">s</span>
         </div>
       </div>
@@ -803,10 +858,12 @@ function sortForDisplay(cls: Classification): MCard[] {
 function PassBanner() {
   return (
     <div className="pass-banner" aria-live="assertive">
-      <div className="pass-banner-emoji">🙅</div>
-      <div className="pass-banner-title">패스했습니다</div>
-      <div className="pass-banner-sub">
-        낼 카드가 없거나 전략적 보류 — 이번 덱에 다시 참여할 수 없어요
+      <span className="pass-banner-emoji">🙅</span>
+      <div className="pass-banner-body">
+        <div className="pass-banner-title">패스했습니다</div>
+        <div className="pass-banner-sub">
+          이번 리드는 참여 불가 · 새 리드 시작 시 복귀
+        </div>
       </div>
     </div>
   );
@@ -818,12 +875,14 @@ function HandStrip({
   form,
   onToggle,
   sortMode,
+  disabled: allDisabled,
 }: {
   hand: MCard[];
   selected: string[];
   form: TrickForm;
   onToggle: (c: MCard) => void;
   sortMode: SortMode;
+  disabled?: boolean;
 }) {
   const sorted = useMemo(() => {
     const arr = [...hand];
@@ -851,7 +910,7 @@ function HandStrip({
     const isSel = selected.includes(c.id);
     const wild = c.value == null;
     const tone = wild ? "wild" : c.value! === 1 ? "royal" : "white";
-    const disabled = form.kind !== "none" && !canFollowWithCard(c, form);
+    const disabled = allDisabled || (form.kind !== "none" && !canFollowWithCard(c, form));
     const prev = sorted[i - 1];
     if (prev && !sameValue(prev, c)) {
       nodes.push(<span key={`sep-${i}`} className="group-sep" aria-hidden />);
@@ -872,7 +931,7 @@ function HandStrip({
       </button>
     );
   }
-  return <div className="hand-strip">{nodes}</div>;
+  return <div className={`hand-strip ${allDisabled ? "waiting" : ""}`}>{nodes}</div>;
 }
 
 function sameValue(a: MCard, b: MCard): boolean {

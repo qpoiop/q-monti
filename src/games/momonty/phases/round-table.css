@@ -1,0 +1,135 @@
+/*
+ * §1-3 원탁 자리 배치. Seats are absolutely positioned around a
+ * central pile via a small angle calculation so this scales to
+ * 2-6 seat matches without per-count CSS.
+ */
+
+.round-table {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 4px;
+  flex: 1;
+  min-height: 0;
+}
+.rt-eyebrow {
+  text-align: center;
+  color: var(--accent-1);
+  font-family: var(--font-brand);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+.rt-stage {
+  position: relative;
+  flex: 1;
+  min-height: 260px;
+  margin: 4px 0;
+}
+.rt-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(242, 193, 78, 0.16), rgba(255, 255, 255, 0.03));
+  border: 1.5px solid rgba(242, 193, 78, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.rt-center-label {
+  color: var(--text-5);
+  font-size: 9px;
+}
+.rt-center-icon {
+  font-size: 26px;
+}
+.rt-center-sub {
+  color: var(--accent-1);
+  font-family: var(--font-brand);
+  font-size: 9px;
+}
+
+.rt-seat {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  min-width: 60px;
+}
+.rt-seat-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-3);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+}
+.rt-seat[data-role="gold"] .rt-seat-avatar {
+  background: linear-gradient(135deg, #f2c14e, #d99a2b);
+  color: #2a2350;
+  border: none;
+  box-shadow: 0 0 14px rgba(242, 193, 78, 0.5);
+}
+.rt-seat[data-role="lilac"] .rt-seat-avatar {
+  background: rgba(214, 179, 255, 0.22);
+  color: var(--rank-lesser-momonty);
+  border: 1.5px solid var(--rank-lesser-momonty);
+}
+.rt-seat[data-role="blue"] .rt-seat-avatar {
+  background: rgba(127, 176, 232, 0.18);
+  color: var(--rank-lesser-peon);
+  border: 1.5px solid rgba(127, 176, 232, 0.5);
+}
+.rt-seat[data-role="grey"] .rt-seat-avatar {
+  background: rgba(138, 130, 152, 0.25);
+  color: var(--rank-peon);
+  border: 1.5px solid rgba(138, 130, 152, 0.5);
+}
+.rt-seat[data-me="true"] .rt-seat-avatar {
+  outline: 2px solid var(--accent-1);
+  outline-offset: 2px;
+}
+.rt-seat-name {
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
+}
+.rt-seat[data-role="gold"] .rt-seat-name {
+  color: var(--accent-3);
+}
+.rt-seat[data-role="blue"] .rt-seat-name {
+  color: var(--rank-lesser-peon);
+}
+.rt-seat[data-role="grey"] .rt-seat-name {
+  color: var(--rank-peon);
+}
+.rt-seat-role {
+  color: var(--text-5);
+  font-size: 8.5px;
+  margin-top: 1px;
+}
+
+.rt-hint {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 1.5;
+}

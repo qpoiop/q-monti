@@ -42,8 +42,11 @@ export function Particles({
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     const preset = presets[variant];
-    const particles = spawnPool(canvas, preset, density);
 
+    // Size the canvas BEFORE spawning particles. Otherwise the pool
+    // seeds with Math.random() * canvas.width where width is still 0,
+    // and every particle spawns at (0,0) — the top-left clump you
+    // could see on the home screen.
     const onResize = () => {
       const parent = canvas.parentElement;
       if (!parent) return;
@@ -54,6 +57,7 @@ export function Particles({
       canvas.style.height = `${rect.height}px`;
     };
     onResize();
+    const particles = spawnPool(canvas, preset, density);
     const ro = new ResizeObserver(onResize);
     ro.observe(canvas.parentElement!);
 

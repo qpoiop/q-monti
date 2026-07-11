@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#150d2c" />
+      <stop offset="1" stop-color="#1c1533" />
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="30%" r="60%">
+      <stop offset="0" stop-color="#f2c14e" stop-opacity="0.35" />
+      <stop offset="0.6" stop-color="#c855f0" stop-opacity="0.14" />
+      <stop offset="1" stop-color="#c855f0" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#e7e2f5" />
+    </linearGradient>
+    <linearGradient id="title" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f2c14e" />
+      <stop offset="0.5" stop-color="#f8d98a" />
+      <stop offset="1" stop-color="#c855f0" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <rect width="1200" height="630" fill="url(#glow)" />
+  <g transform="translate(220 330)">
+    <g transform="translate(-118 4)"><rect x="-52" y="-84" width="120" height="188" rx="22" fill="url(#card)" transform="rotate(-14)" /></g>
+    <g transform="translate(116 4)"><rect x="-68" y="-84" width="120" height="188" rx="22" fill="url(#card)" transform="rotate(14)" /></g>
+    <g transform="translate(0 -20)">
+      <rect x="-72" y="-104" width="144" height="208" rx="24" fill="url(#card)" stroke="#f2c14e" stroke-width="8" />
+      <text x="0" y="42" text-anchor="middle" font-family="Outfit, sans-serif" font-weight="900" font-size="120" fill="#c8912a">1</text>
+      <text x="0" y="-62" text-anchor="middle" font-size="48">👑</text>
+    </g>
+  </g>
+  <g transform="translate(460 220)">
+    <text x="0" y="0" font-family="Outfit, 'Noto Sans KR', sans-serif" font-weight="900" font-size="130" fill="url(#title)">모몬티</text>
+    <text x="0" y="70" font-family="'Noto Sans KR', sans-serif" font-weight="700" font-size="34" fill="#f4f2ff">낮은 숫자가 왕이 되는 서열 대전</text>
+    <text x="0" y="130" font-family="'Noto Sans KR', sans-serif" font-weight="500" font-size="24" fill="#9a92c0">과세 · 혁명 · 와일드 · 쿼드 클리어 · 실시간 6인 PWA</text>
+    <g transform="translate(0 180)">
+      <rect x="0" y="0" width="130" height="42" rx="21" fill="rgba(242,193,78,0.16)" stroke="rgba(242,193,78,0.4)" stroke-width="1.5"/>
+      <text x="65" y="27" text-anchor="middle" font-family="'Noto Sans KR', sans-serif" font-weight="700" font-size="18" fill="#f8d98a">👑 서열전</text>
+      <rect x="145" y="0" width="150" height="42" rx="21" fill="rgba(200,85,240,0.14)" stroke="rgba(200,85,240,0.36)" stroke-width="1.5"/>
+      <text x="220" y="27" text-anchor="middle" font-family="'Noto Sans KR', sans-serif" font-weight="700" font-size="18" fill="#e0b6ff">✊ 혁명</text>
+      <rect x="310" y="0" width="160" height="42" rx="21" fill="rgba(127,176,232,0.14)" stroke="rgba(127,176,232,0.32)" stroke-width="1.5"/>
+      <text x="390" y="27" text-anchor="middle" font-family="'Noto Sans KR', sans-serif" font-weight="700" font-size="18" fill="#7fb0e8">★ 와일드</text>
+    </g>
+  </g>
+</svg>

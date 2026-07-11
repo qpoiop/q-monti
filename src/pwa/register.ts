@@ -13,6 +13,15 @@ export function registerSW(): void {
   window.addEventListener("load", async () => {
     try {
       const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+      const checkWaiting = (): void => {
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          waitingWorker = reg.waiting;
+          window.dispatchEvent(new CustomEvent("momonti:sw-update"));
+        }
+      };
+      // A worker might already be waiting from a previous tab — surface
+      // it immediately instead of waiting for updatefound to re-fire.
+      checkWaiting();
       reg.addEventListener("updatefound", () => {
         const installing = reg.installing;
         if (!installing) return;
@@ -23,7 +32,14 @@ export function registerSW(): void {
           }
         });
       });
-      // Periodic version check.
+      // Nudge the browser to compare bytes on this visit rather than
+      // waiting for the hourly heartbeat.
+      reg.update().catch(() => {});
+      // Also re-check on tab focus so a long-lived tab picks up new
+      // deploys without a hard reload.
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") reg.update().catch(() => {});
+      });
       setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
     } catch {
       /* SW unsupported / dev */

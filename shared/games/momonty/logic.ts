@@ -144,6 +144,7 @@ export interface MomontyState {
   hands: Record<string, Card[]>; // secret per seat
   ranks: Record<string, Rank>; // this round's rank tier
   scoreByUser: Record<string, number>; // match-level score
+  rankHistoryByUser: Record<string, Rank[]>; // per-round rank history (populated at endRound)
   outOrder: string[]; // seats who cleared their hand this round, in order
   history: Array<{ type: string; payload?: any; seatId?: string }>;
   taxation: {
@@ -249,7 +250,7 @@ function canBeatCurrentTrick(state: MomontyState, seatId: string): boolean {
   return false;
 }
 
-function nextSeat(state: MomontyState): void {
+function nextSeat(state: MomontyState, events?: GameEvent[]): void {
   state.currentSeatIdx = (state.currentSeatIdx + 1) % state.seatOrder.length;
   const trick = state.currentTrick;
   for (let n = 0; n < state.seatOrder.length; n++) {
@@ -265,7 +266,14 @@ function nextSeat(state: MomontyState): void {
     }
     if (trick.topPlay && trick.topPlay.seatId === seatId) {
       // Trick came back to the leader — everyone else passed. Clear pile.
+      const winner = trick.topPlay.seatId;
+      const topCards = trick.topPlay.cards;
       clearTrick(state);
+      events?.push({
+        type: "trickClear",
+        actorSeatId: winner,
+        payload: { cards: topCards, count: topCards.length },
+      });
       return;
     }
     // Auto-pass unplayable: if the seat can't beat the current form and the
@@ -315,25 +323,31 @@ function analyseCards(
 
   if (cards.length === 0) throw new Error("no cards");
 
-  // Pure jester play — must declare wildAsValue.
+  // Pure jester play — jester without a numbered anchor auto-assumes
+  // cardMax + 1 (i.e. 13 in the default deck). That's weaker than any
+  // real card, so a solo wild lead cedes the pile to any follower and
+  // a solo wild follow can never legally beat the current form. The
+  // client's wildAsValue is ignored for pure-jester submissions so the
+  // rule can't be gamed with an inflated declaration.
   if (numbered.length === 0) {
-    if (wildAsValue == null) throw new Error("wildAsValue required");
+    void wildAsValue;
+    const soloValue = 13;
     return {
       form:
         cards.length === 1
-          ? { kind: "single", value: wildAsValue }
+          ? { kind: "single", value: soloValue }
           : cards.length === 2
-          ? { kind: "pair", value: wildAsValue }
+          ? { kind: "pair", value: soloValue }
           : cards.length === 3
-          ? { kind: "triple", value: wildAsValue }
+          ? { kind: "triple", value: soloValue }
           : cards.length === 4
-          ? { kind: "quad", value: wildAsValue }
+          ? { kind: "quad", value: soloValue }
           : (() => {
               throw new Error("cannot form straight from jesters alone");
             })(),
       jesterCount: jc,
       length: cards.length,
-      effectiveValue: wildAsValue,
+      effectiveValue: soloValue,
     };
   }
 
@@ -428,10 +442,15 @@ function assignRanks(
   for (let i = 0; i < n; i++) {
     const seatId = remaining[i];
     let tier: Rank;
+    // Rank tiers require the seat count to actually contain them. In a
+    // 3-player match there's no separate MOMONTY/PEON tier — only
+    // GRAND_MOMONTY, MERCHANT, GRAND_PEON. Assigning MOMONTY without a
+    // matching PEON leaves the tax return with no target and throws
+    // "no return target" downstream.
     if (i === 0) tier = "GRAND_MOMONTY";
-    else if (i === 1) tier = "MOMONTY";
     else if (i === n - 1) tier = "GRAND_PEON";
-    else if (i === n - 2) tier = "PEON";
+    else if (i === 1 && n >= 4) tier = "MOMONTY";
+    else if (i === n - 2 && n >= 4) tier = "PEON";
     else tier = "MERCHANT";
     ranks[seatId] = tier;
   }
@@ -476,6 +495,7 @@ export interface MomontyView {
   mySeatId?: string | null;
   ranks: Record<string, Rank>;
   scoreByUser: Record<string, number>;
+  rankHistoryByUser: Record<string, Rank[]>;
   outOrder: string[];
   historyTail: MomontyState["history"];
   taxation: MomontyState["taxation"] & {
@@ -589,6 +609,7 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
       hands: {},
       ranks: Object.fromEntries(seatOrder.map((s) => [s, "MERCHANT" as Rank])),
       scoreByUser: Object.fromEntries(seats.map((s) => [s.userId, 0])),
+      rankHistoryByUser: Object.fromEntries(seats.map((s) => [s.userId, [] as Rank[]])),
       outOrder: [],
       history: [],
       taxation: {
@@ -664,13 +685,28 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
         picked.push(hand[idx]);
         hand.splice(idx, 1);
       }
-      // System auto-picks top values for peons — client should send those.
-      // We trust the client but validate: value should be highest N of the hand
-      // before the pick. Skip validation for simplicity; the auto-pick UI enforces it.
-      state.taxation.uploadedCards[seatId] = picked;
+      // Route each upload straight into the target momonty's hand as it
+      // lands, not deferred until every peon has finished. Previous
+      // behaviour parked the cards in `uploadedCards` — the target's
+      // hand had a phantom count while the summary said they'd already
+      // received them.
+      const peonRank = state.ranks[seatId];
+      const targetRank = peonRank === "GRAND_PEON" ? "GRAND_MOMONTY" : "MOMONTY";
+      const targetSeat = Object.entries(state.ranks).find(([, r]) => r === targetRank)?.[0];
+      if (targetSeat) {
+        state.hands[targetSeat].push(...picked);
+        state.taxation.completedTransfers.push({
+          direction: "upload",
+          fromSeatId: seatId,
+          toSeatId: targetSeat,
+          cards: picked,
+        });
+      } else {
+        // No matching momonty — stash for the summary; unusual but safe.
+        state.taxation.uploadedCards[seatId] = picked;
+      }
       delete state.taxation.pendingUploads[seatId];
       events.push({ type: "uploaded", actorSeatId: seatId, payload: { count: picked.length } });
-      // If uploads done and returns done, move to PLAYING.
       maybeStartPlaying(state, events);
       return { state, events };
     }
@@ -754,7 +790,7 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
         state.currentTrick.passSeatIds.push(seatId);
         state.history.push({ type: "pass", seatId });
         events.push({ type: "pass", actorSeatId: seatId });
-        nextSeat(state);
+        nextSeat(state, events);
         // Stall guard: if the trick's leader is out (empty hand) and every
         // seat still in the round has passed, `nextSeat` won't ever hit
         // the leader-return branch. Force-clear the trick so play moves
@@ -768,9 +804,14 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
               !state.currentTrick.passSeatIds.includes(s)
           );
           const formActive = (state.currentTrick.form as TrickForm).kind !== "none";
+          const topCards = state.currentTrick.topPlay?.cards ?? [];
           if (leaderOut && eligible.length === 0 && formActive) {
             clearTrick(state);
-            events.push({ type: "trickClear", actorSeatId: leader });
+            events.push({
+              type: "trickClear",
+              actorSeatId: leader,
+              payload: { cards: topCards, count: topCards.length },
+            });
           }
         }
         // Also revisit round-end since the pile just may have shrunk the
@@ -847,11 +888,11 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
           if (!state.outOrder.includes(seatId)) state.outOrder.push(seatId);
           events.push({ type: "out", actorSeatId: seatId });
           // Advance turn ownership away from finished seat.
-          nextSeat(state);
+          nextSeat(state, events);
         } else if (!quadCleared) {
           // Normal play — advance to next seat. When quad-lock triggers,
           // clearTrick already set the acting seat back to the winner.
-          nextSeat(state);
+          nextSeat(state, events);
         }
       }
 
@@ -899,6 +940,7 @@ export const momontyGame: GameModule<MomontyConfig, MomontyState, MomontyAction,
       mySeatId: seatId,
       ranks: state.ranks,
       scoreByUser: state.scoreByUser,
+      rankHistoryByUser: state.rankHistoryByUser,
       outOrder: state.outOrder,
       historyTail: state.history.slice(-30),
       taxation: {
@@ -962,6 +1004,9 @@ function endRound(state: MomontyState, rng: Rng, events: GameEvent[]): void {
   }
 
   state.ranks = ranks;
+  for (const seatId of seats) {
+    (state.rankHistoryByUser[seatId] ??= []).push(ranks[seatId]);
+  }
   state.match.completedRounds += 1;
   events.push({ type: "roundEnd", payload: { ranks, outOrder: state.outOrder } });
 

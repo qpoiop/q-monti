@@ -37,8 +37,15 @@ export function ConnectionOverlay() {
       return;
     }
     setStartedAt((prev) => prev ?? Date.now());
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
+    // rAF loop so the grace-timer progress ring reads as a continuous
+    // sweep, not a 1-sec step. Text still rounds to seconds.
+    let rafId = 0;
+    const tick = () => {
+      setNow(Date.now());
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
   }, [status]);
 
   if (status === "connected" || status === "idle") return null;
@@ -116,11 +123,17 @@ export function ConnectionOverlay() {
         { label: "다시 시도", variant: "primary", onClick: retryConnection },
       ];
 
+  const pct = showCountdown ? remainingMs / GRACE_MS : 1;
+  const warning = showCountdown && remainingMs <= 30_000;
+
   return (
     <OverlayScrim align="center">
       <DialogCard>
         {showSpinner && !expired ? (
-          <div className="spinner-ring">
+          <div
+            className={`spinner-ring ${warning ? "warning" : ""}`}
+            style={{ ["--conn-pct" as any]: pct }}
+          >
             <span className="spinner-emoji">⚡</span>
           </div>
         ) : (

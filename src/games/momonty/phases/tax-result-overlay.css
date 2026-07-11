@@ -211,6 +211,23 @@
   color: #e0b6ff;
 }
 
+.tax-result-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.tax-result-head-body {
+  flex: 1;
+  min-width: 0;
+}
+.tax-result-ring-sec {
+  color: var(--accent-3);
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1;
+}
 .tax-result-cta {
   padding: 14px;
   border-radius: 12px;

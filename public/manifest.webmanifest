@@ -1,7 +1,7 @@
 {
-  "name": "모몬티",
+  "name": "모몬티 · 낮은 숫자가 왕이 되는 서열 대전",
   "short_name": "모몬티",
-  "description": "낮은 숫자가 왕이 되는 서열 셰딩 대전",
+  "description": "과세 · 혁명 · 와일드 · 쿼드 클리어. 실시간 최대 8인 서열 대전. 방 코드로 바로 입장하는 서열 셰딩 카드게임.",
   "start_url": "/",
   "scope": "/",
   "id": "/",
@@ -11,13 +11,21 @@
   "theme_color": "#120e26",
   "lang": "ko",
   "dir": "ltr",
-  "categories": ["games", "board"],
+  "categories": ["games", "board", "entertainment"],
   "icons": [
     {
       "src": "/icons/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/og.svg",
+      "sizes": "1200x630",
+      "type": "image/svg+xml",
+      "form_factor": "wide"
     }
   ]
 }

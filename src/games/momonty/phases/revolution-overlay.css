@@ -14,7 +14,7 @@
     radial-gradient(80% 60% at 50% 40%, rgba(200, 85, 240, 0.36), transparent 65%),
     linear-gradient(165deg, rgba(26, 13, 44, 0.94), rgba(42, 17, 64, 0.98));
   backdrop-filter: blur(10px);
-  animation: revolt-scrim 2.6s var(--easing);
+  animation: rules-fade var(--dur-med) var(--easing);
 }
 .revolution-scrim.great {
   background:
@@ -24,13 +24,16 @@
 }
 .revolution-card {
   text-align: center;
-  animation: revolt-card 2.6s var(--easing);
+  animation: rules-up var(--dur-med) var(--easing);
   color: #fff;
   padding: 0 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
-.revolution-emoji {
-  font-size: 68px;
-  filter: drop-shadow(0 12px 30px rgba(200, 85, 240, 0.6));
+.revolution-ring-emoji {
+  font-size: 32px;
+  filter: drop-shadow(0 6px 14px rgba(200, 85, 240, 0.55));
   animation: revolt-shake 0.5s var(--easing);
 }
 .revolution-title {
@@ -55,30 +58,90 @@
   margin-top: 8px;
   line-height: 1.6;
 }
-.revolution-jesters {
-  margin-top: 22px;
-  display: flex;
-  gap: 14px;
-  justify-content: center;
-}
-.rev-jester {
-  width: 64px;
-  height: 90px;
-  border-radius: 12px;
-  background: linear-gradient(160deg, #2a2350, #1a1636);
-  border: 1.5px solid var(--brand-purple-2);
-  box-shadow: 0 0 18px rgba(200, 85, 240, 0.55);
-  color: #e0b6ff;
+.revolution-great-badge {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-3));
+  color: var(--accent-text-on);
   font-family: var(--font-brand);
   font-weight: 800;
-  font-size: 26px;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  box-shadow: 0 0 20px rgba(242, 193, 78, 0.55);
+  animation: badge-pulse 1.4s ease-in-out infinite;
+}
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+.revolution-effects {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  max-width: 260px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.revolution-effect {
   display: flex;
   align-items: center;
-  justify-content: center;
-  transform: rotate(-7deg);
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 12.5px;
+  text-align: left;
+  line-height: 1.4;
 }
-.rev-jester:last-child {
-  transform: rotate(7deg);
+.revolution-effect b {
+  color: #fff;
+  font-family: var(--font-brand);
+  font-weight: 800;
+}
+.revolution-effect.danger {
+  color: #fda4af;
+}
+.revolution-effect.danger b {
+  color: #fecdd3;
+}
+.revolution-effect-tick {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(52, 211, 153, 0.24);
+  color: #a5f3c4;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.revolution-effect.danger .revolution-effect-tick {
+  background: rgba(253, 164, 175, 0.24);
+  color: #fda4af;
+}
+.revolution-cta {
+  margin-top: 22px;
+  padding: 12px 24px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, var(--brand-purple-2), var(--accent-1));
+  color: #fff;
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 12px 24px -8px rgba(200, 85, 240, 0.6);
+}
+.revolution-cta:active {
+  transform: scale(0.97);
 }
 @keyframes revolt-scrim {
   0% { opacity: 0; }

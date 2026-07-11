@@ -91,20 +91,43 @@ export function Taxation({ view }: { view: MomontyView }) {
 
   // Momonty side may have already received uploads from peons — show a
   // pill telling them what landed in their hand before they pick returns.
-  const receivedCards: MCard[] = ret > 0
-    ? Object.values(view.taxation.uploadedCards ?? {}).flat()
+  // Filter to transfers TARGETED at my seat so a lesser momonty doesn't
+  // see the grand peon's cards and vice versa.
+  const receivedCards: MCard[] = ret > 0 && view.mySeatId
+    ? (view.taxation.completedTransfers ?? [])
+        .filter((t) => t.direction === "upload" && t.toSeatId === view.mySeatId)
+        .flatMap((t) => t.cards)
     : [];
 
+  // Post-upload waiting: peon already uploaded (owe=0) but taxation
+  // hasn't wrapped yet. Distinguish from a genuine merchant seat with
+  // no obligations.
+  const isMerchant = myRank === "MERCHANT";
+  const alreadyDonated = view.mySeatId
+    ? (view.taxation.completedTransfers ?? []).some(
+        (t) => t.direction === "upload" && t.fromSeatId === view.mySeatId
+      )
+    : false;
+
   if (upload === 0 && ret === 0) {
-    // No obligation — either a merchant or nothing to do.
     return (
       <div className="taxation waiting">
         <div className="tax-header">
-          <span className="tax-header-emoji">🛒</span>
+          <span className="tax-header-emoji">{alreadyDonated ? "✓" : "🛒"}</span>
           <div className="tax-header-text">
-            <div className="tax-title">과세 대기 중</div>
+            <div className="tax-title">
+              {alreadyDonated
+                ? "상납 완료 · 대기 중"
+                : isMerchant
+                ? "과세 대기 중"
+                : "과세 종료"}
+            </div>
             <div className="tax-sub">
-              내 서열({rankLabel(myRank)}) 은 과세 대상이 아닙니다.
+              {alreadyDonated
+                ? "다른 참가자의 반환이 끝나면 자동 진행됩니다."
+                : isMerchant
+                ? `내 서열(${rankLabel(myRank)})은 과세 대상이 아닙니다.`
+                : "잠시만 기다려주세요."}
             </div>
           </div>
         </div>

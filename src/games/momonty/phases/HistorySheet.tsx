@@ -46,43 +46,61 @@ export function HistorySheet() {
   const seatNames = view.seatNames ?? {};
   const historyTail = view.historyTail ?? [];
 
-  const playsThisTrick: Array<{
+  interface Rec {
     seatId?: string;
     cards: { value: number | null }[];
     type: string;
-  }> = [];
-  const playsThisRound: typeof playsThisTrick = [];
+    isLead?: boolean;
+    tookPile?: boolean;
+    followedByAllPass?: boolean;
+  }
+  const playsThisTrick: Rec[] = [];
+  const playsThisRound: Rec[] = [];
 
-  // Walk backwards through the tail. Anything at or after the last
-  // trickClear counts as this trick. Everything else stays in round.
-  const events = [...historyTail];
-  let seenTrickClear = false;
-  for (let i = events.length - 1; i >= 0; i--) {
-    const e: any = events[i];
+  // Walk forward — capture per-trick lead + winner + trailing all-pass.
+  let curTrick: Rec[] = [];
+  const flushTrick = (): void => {
+    if (curTrick.length === 0) return;
+    curTrick[0].isLead = true;
+    // Winner = last non-pass entry.
+    for (let i = curTrick.length - 1; i >= 0; i--) {
+      if (curTrick[i].type === "play") {
+        curTrick[i].tookPile = true;
+        // If everyone after them passed, tag "이후 전원 패스".
+        const passAfter = curTrick.slice(i + 1).every((r) => r.type !== "play");
+        if (i < curTrick.length - 1 && passAfter) curTrick[i].followedByAllPass = true;
+        break;
+      }
+    }
+    for (const r of curTrick) playsThisRound.push(r);
+  };
+  for (const e of historyTail as any[]) {
     if (e.type === "trickClear") {
-      seenTrickClear = true;
+      flushTrick();
+      curTrick = [];
       continue;
     }
     if (e.type === "play" && e.payload?.cards) {
-      const record = {
+      curTrick.push({
         seatId: e.seatId,
-        cards: e.payload.cards as { value: number | null }[],
+        cards: e.payload.cards,
         type: "play",
-      };
-      if (!seenTrickClear) playsThisTrick.unshift(record);
-      playsThisRound.unshift(record);
-    }
-    if (e.type === "pass") {
-      const record = { seatId: e.seatId, cards: [], type: "pass" };
-      if (!seenTrickClear) playsThisTrick.unshift(record);
-      playsThisRound.unshift(record);
-    }
-    if (e.type === "autoPass") {
-      const record = { seatId: e.seatId, cards: [], type: "auto-pass" };
-      if (!seenTrickClear) playsThisTrick.unshift(record);
-      playsThisRound.unshift(record);
+      });
+    } else if (e.type === "pass") {
+      curTrick.push({ seatId: e.seatId, cards: [], type: "pass" });
+    } else if (e.type === "autoPass") {
+      curTrick.push({ seatId: e.seatId, cards: [], type: "auto-pass" });
     }
   }
+  // Anything left in curTrick is the ongoing trick.
+  for (const r of curTrick) {
+    if (curTrick[0] === r) r.isLead = true;
+    playsThisTrick.push(r);
+    playsThisRound.push(r);
+  }
+  // Newest first for display.
+  playsThisTrick.reverse();
+  playsThisRound.reverse();
 
   const rows = tab === "trick" ? playsThisTrick : tab === "round" ? playsThisRound : [];
   const sets = Math.max(1, view.config.cardSets);
@@ -115,7 +133,12 @@ export function HistorySheet() {
           </button>
         </div>
         <div className="history-sub">
-          라운드 {view.round} · {tab === "trick" ? "이번 덱" : tab === "round" ? "라운드 전체" : "남은 카드 카운팅"}
+          라운드 {view.round} ·{" "}
+          {tab === "trick"
+            ? "이번 리드에 나온 세트 (최신순)"
+            : tab === "round"
+            ? "이번 라운드에 나온 세트 (최신순)"
+            : "남은 카드 카운팅"}
         </div>
         <div className="history-tabs">
           <button
@@ -123,7 +146,7 @@ export function HistorySheet() {
             className={`history-tab ${tab === "trick" ? "active" : ""}`}
             onClick={() => setTab("trick")}
           >
-            이번 덱
+            이번 리드
           </button>
           <button
             type="button"
@@ -164,33 +187,50 @@ export function HistorySheet() {
           ) : rows.length === 0 ? (
             <div className="history-empty">아직 기록이 없어요</div>
           ) : (
-            rows.map((r, i) => (
-              <div
-                key={i}
-                className={`history-row ${r.type === "play" ? "" : "passed"}`}
-              >
-                <span className="history-row-idx">{rows.length - i}</span>
-                {r.type === "play" ? (
-                  <span className="history-mini-cards">
-                    {r.cards.map((c, j) => (
-                      <span
-                        key={j}
-                        className={`history-mini-card ${c.value == null ? "wild" : ""}`}
-                      >
-                        {c.value ?? "★"}
-                      </span>
-                    ))}
+            rows.map((r, i) => {
+              const isMe = r.seatId === view.mySeatId;
+              const displayName = r.seatId
+                ? isMe
+                  ? `나 (${seatNames[r.seatId] ?? "나"})`
+                  : seatNames[r.seatId] ?? r.seatId
+                : "-";
+              return (
+                <div
+                  key={i}
+                  className={`history-row ${r.tookPile ? "took-pile" : ""} ${
+                    r.type === "play" ? "" : "passed"
+                  }`}
+                >
+                  <span className="history-row-idx">{rows.length - i}</span>
+                  {r.type === "play" ? (
+                    <span className="history-mini-cards">
+                      {r.cards.map((c, j) => (
+                        <span
+                          key={j}
+                          className={`history-mini-card ${c.value == null ? "wild" : ""}`}
+                        >
+                          {c.value ?? "★"}
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    <span className="history-pass-pill">
+                      {r.type === "auto-pass" ? "자동 패스" : "패스"}
+                    </span>
+                  )}
+                  <span className={`history-actor ${isMe ? "me" : ""}`}>
+                    {r.isLead ? "👑 " : ""}
+                    {displayName}
+                    {r.isLead ? " · 리드" : ""}
                   </span>
-                ) : (
-                  <span className="history-pass-pill">
-                    {r.type === "auto-pass" ? "자동 패스" : "패스"}
-                  </span>
-                )}
-                <span className="history-actor">
-                  {r.seatId ? seatNames[r.seatId] ?? r.seatId : "-"}
-                </span>
-              </div>
-            ))
+                  {r.tookPile ? (
+                    <span className="history-tag took">최종 획득 ✓</span>
+                  ) : r.followedByAllPass ? (
+                    <span className="history-tag pass-after">이후 전원 패스</span>
+                  ) : null}
+                </div>
+              );
+            })
           )}
         </div>
       </div>
