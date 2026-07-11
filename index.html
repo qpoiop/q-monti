@@ -12,7 +12,22 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icons/icon.svg" />
-    <title>모몬티</title>
+    <title>모몬티 · 낮은 숫자가 왕이 되는 서열 대전</title>
+    <meta name="description" content="모몬티 — 낮은 숫자가 왕이 되는 서열 대전. 과세 · 혁명 · 와일드 · 쿼드 클리어. 실시간 최대 8인, 방 코드로 바로 입장. 설치 없이 브라우저에서." />
+    <meta name="keywords" content="모몬티, 달몬티, momonti, 카드게임, 서열, 대부호, 파티게임, PWA" />
+    <meta name="author" content="Momonti" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="모몬티" />
+    <meta property="og:title" content="모몬티 · 낮은 숫자가 왕이 되는 서열 대전" />
+    <meta property="og:description" content="과세 · 혁명 · 와일드 · 쿼드 클리어. 실시간 최대 8인 서열전. 방 코드로 바로 입장." />
+    <meta property="og:image" content="/icons/og.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="모몬티 · 낮은 숫자가 왕이 되는 서열 대전" />
+    <meta name="twitter:description" content="과세 · 혁명 · 와일드 · 쿼드 클리어. 실시간 최대 8인 서열전." />
+    <meta name="twitter:image" content="/icons/og.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -21,6 +36,36 @@
     />
   </head>
   <body>
+    <style>
+      html, body { margin: 0; background: #120e26; color: #f4f2ff; }
+      #splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        background: radial-gradient(80% 60% at 50% 40%, rgba(242,193,78,0.16), transparent 60%), #120e26;
+        font-family: 'Outfit', 'Noto Sans KR', -apple-system, sans-serif;
+        font-weight: 900;
+        font-size: 44px;
+        letter-spacing: -0.02em;
+        background-clip: text;
+      }
+      #splash span {
+        background: linear-gradient(135deg, #f2c14e, #f8d98a 50%, #c855f0);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        animation: splash-pulse 1.6s ease-in-out infinite;
+      }
+      @keyframes splash-pulse {
+        0%, 100% { opacity: 0.7; }
+        50% { opacity: 1; }
+      }
+      body.app-ready #splash { display: none; }
+    </style>
+    <div id="splash"><span>모몬티</span></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

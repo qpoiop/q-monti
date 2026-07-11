@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "@web/state/store";
 import { Particles } from "./Particles";
 
@@ -20,17 +20,24 @@ const EMPTY_EVENTS: unknown[] = [];
 
 type Fx =
   | { kind: "revolution" }
-  | { kind: "quad" }
+  | { kind: "quad"; byMe: boolean; actorName?: string }
   | { kind: "roundEnd" }
   | { kind: "matchEnd" };
 
 export function EventFx() {
   const events = useStore((s) => s.gameView?.lastEvents ?? EMPTY_EVENTS);
   const version = useStore((s) => s.gameView?.version ?? 0);
+  const view = useStore((s) => (s.gameView?.view as any) ?? null);
   const [active, setActive] = useState<Fx | null>(null);
+  // Prevent a rapid-fire storm (e.g., two mirror bumps carrying the same
+  // quadClear event) from re-triggering the FX. We stamp each processed
+  // version and refuse to re-play the same one.
+  const firedVersionRef = useRef<number>(-1);
 
   useEffect(() => {
     if (!events.length) return;
+    if (version === firedVersionRef.current) return;
+    firedVersionRef.current = version;
     // Pick the most dramatic event in this batch.
     const rank = (e: any): number => {
       switch (e?.type) {
@@ -58,11 +65,24 @@ export function EventFx() {
         ? "matchEnd"
         : null;
     if (!kind) return;
-    setActive({ kind });
-    const t = setTimeout(() => setActive(null), FX_MS);
-    return () => clearTimeout(t);
+    if (kind === "quad") {
+      const actor = chosen?.actorSeatId as string | undefined;
+      const mySeatId = view?.mySeatId as string | undefined;
+      const actorName = actor ? view?.seatNames?.[actor] : undefined;
+      setActive({ kind, byMe: !!actor && actor === mySeatId, actorName });
+    } else {
+      setActive({ kind } as Fx);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version]);
+
+  // Ownership of the "hide after FX_MS" timer lives here so cleanup on
+  // active-change doesn't accidentally cancel a pending null-set.
+  useEffect(() => {
+    if (!active) return;
+    const t = setTimeout(() => setActive(null), FX_MS);
+    return () => clearTimeout(t);
+  }, [active]);
 
   if (!active) return null;
   const variant =
@@ -150,7 +170,9 @@ export function EventFx() {
         }}
       >
         {active.kind === "quad"
-          ? "QUAD CLEAR · 계속 리드"
+          ? active.byMe
+            ? "QUAD CLEAR · 계속 리드"
+            : `QUAD CLEAR · ${active.actorName ?? "상대"} 리드`
           : active.kind === "revolution"
           ? "REVOLUTION"
           : active.kind === "roundEnd"

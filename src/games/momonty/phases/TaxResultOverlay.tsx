@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@web/state/store";
+import { useOverlayHold } from "@web/state/hooks";
+import { CountdownRing } from "@web/design/effects/CountdownRing";
 import type { MomontyView, TaxTransfer } from "@shared/games/momonty/logic";
 import "./tax-result-overlay.css";
 
@@ -32,14 +34,7 @@ export function TaxResultOverlay() {
     }
   }, [version, events, visible]);
 
-  useEffect(() => {
-    if (!open) return;
-    // Turn timer is already ticking behind this scrim — auto-dismiss
-    // after 5s so a distracted user doesn't hand the whole first turn
-    // away to the timeout.
-    const id = window.setTimeout(() => setOpen(null), 5000);
-    return () => window.clearTimeout(id);
-  }, [open]);
+  useOverlayHold(!!open);
 
   if (!open) return null;
 
@@ -58,8 +53,21 @@ export function TaxResultOverlay() {
   return (
     <div className="tax-result-scrim" role="dialog" aria-live="polite">
       <div className="tax-result-card">
-        <div className="tax-result-eyebrow">✓ 과세 완료 · 라운드 시작</div>
-        <div className="tax-result-title">세금이 정산됐습니다</div>
+        <div className="tax-result-head">
+          <div className="tax-result-head-body">
+            <div className="tax-result-eyebrow">과세 완료 · 라운드 시작</div>
+            <div className="tax-result-title">세금이 정산됐습니다</div>
+          </div>
+          <CountdownRing
+            active
+            durationMs={10000}
+            onDone={() => setOpen(null)}
+            tone="gold"
+            size={40}
+          >
+            {(sec) => <span className="tax-result-ring-sec">{sec}</span>}
+          </CountdownRing>
+        </div>
         <div className="tax-result-body">
           {pairs.map((p, i) => (
             <PairRow key={i} pair={p} nameOf={nameOf} />
@@ -70,7 +78,7 @@ export function TaxResultOverlay() {
           className="tax-result-cta"
           onClick={() => setOpen(null)}
         >
-          라운드 시작 ▶
+          확인 · 바로 시작 ▶
         </button>
       </div>
     </div>

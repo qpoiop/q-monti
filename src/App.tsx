@@ -13,9 +13,11 @@ import { InstallLayer } from "./screens/InstallLayer";
 import { ExitConfirm } from "./screens/ExitConfirm";
 import { RulesSheet } from "./screens/RulesSheet";
 import { SettingsSheet } from "./screens/SettingsSheet";
+import { PoliciesSheet } from "./screens/PoliciesSheet";
 import { EventFx } from "./design/effects/EventFx";
 import { RevolutionOverlay } from "./games/momonty/phases/RevolutionOverlay";
 import { TaxResultOverlay } from "./games/momonty/phases/TaxResultOverlay";
+import { PileClearOverlay } from "./games/momonty/phases/PileClearOverlay";
 import { HistorySheet } from "./games/momonty/phases/HistorySheet";
 import { initRouter } from "./nav/router";
 import { registerSW } from "./pwa/register";
@@ -55,12 +57,14 @@ export function App() {
       <EventFx />
       <RevolutionOverlay />
       <TaxResultOverlay />
+      <PileClearOverlay />
       <HistorySheet />
       <InstallLayer />
       <ConnectionOverlay />
       <ExitConfirm />
       <RulesSheet />
       <SettingsSheet />
+      <PoliciesSheet />
       <Toast />
     </div>
   );

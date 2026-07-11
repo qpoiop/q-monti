@@ -23,7 +23,7 @@ export type Block =
   /** Body paragraph — short prose. */
   | { type: "text"; body: string }
   /** Emphasised callout with a leading icon. */
-  | { type: "callout"; icon: string; title: string; body: string; tone?: "accent" | "danger" | "info" }
+  | { type: "callout"; icon: string; title: string; body: string; tone?: "accent" | "danger" | "info" | "warn" }
   /** Row of playing cards for illustrating a concept. */
   | { type: "cards"; caption?: string; cards: CardSpec[] }
   /** Rank ladder — vertical list of tiered roles. */
@@ -148,6 +148,14 @@ const MOMONTY: Rulebook = {
           body:
             "광대는 부족한 값을 채우는 만능 조커지만, 라운드 끝까지 남으면 벌점 −2. 언제 낼지가 실력.",
           tone: "info",
+        },
+        {
+          type: "callout",
+          icon: "⚠️",
+          title: "광대 단독 사용 = 13",
+          body:
+            "광대는 반드시 숫자카드와 함께 조합해야 실제 값이 됩니다. 홀로 낼 경우 자동으로 13(가장 약함)으로 처리 — 따라내기로는 이길 수 없고, 리드로 내도 다른 참가자 아무 카드에게나 밀립니다.",
+          tone: "warn",
         },
       ],
     },

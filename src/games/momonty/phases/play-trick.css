@@ -12,11 +12,15 @@
 .play-trick {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   padding-bottom: 8px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  scrollbar-width: none;
+}
+.play-trick::-webkit-scrollbar {
+  display: none;
 }
 .play-trick .action-bar {
   position: sticky;
@@ -76,6 +80,11 @@
   background: linear-gradient(135deg, var(--accent-1), var(--accent-3));
   animation: m-turn 1.6s infinite;
 }
+.turn-pill.on.lead {
+  background: linear-gradient(135deg, var(--brand-purple-2), var(--accent-1));
+  color: #fff;
+  box-shadow: 0 0 12px rgba(200, 85, 240, 0.35);
+}
 .turn-pill.off {
   background: var(--glass-3);
   border: 1px solid var(--glass-border-2);
@@ -92,48 +101,76 @@
 /* Timer ring — conic-gradient pie clipped to a circle. Percentage
  * driven by a CSS custom property so the countdown can animate. */
 .timer-ring {
-  width: 60px;
-  height: 60px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
+  --timer-fill: var(--accent-1);
   background: conic-gradient(
-    var(--accent-1) calc(var(--timer-pct, 1) * 360deg),
+    var(--timer-fill) calc(var(--timer-pct, 1) * 360deg),
     rgba(255, 255, 255, 0.12) 0
   );
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex: none;
-  transition: background var(--dur-fast) linear;
+  transition: transform 0.18s var(--easing);
+  transform-origin: center;
+  will-change: transform;
+  overflow: hidden;
 }
-.timer-ring-inner {
-  width: 50px;
-  height: 50px;
+.timer-ring::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: var(--surface-1);
+  transform: translate(-50%, -50%);
+}
+.timer-ring-inner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: center;
   gap: 1px;
   color: #fff;
   font-family: var(--font-brand);
   font-weight: 800;
   white-space: nowrap;
+  z-index: 1;
+  pointer-events: none;
+  line-height: 1;
 }
 .timer-value {
-  font-size: 18px;
+  font-size: 13px;
   line-height: 1;
   letter-spacing: -0.02em;
+  display: inline-block;
 }
 .timer-unit {
-  font-size: 11px;
+  font-size: 8px;
   opacity: 0.7;
   line-height: 1;
-  align-self: center;
-  margin-top: 5px;
+  display: inline-block;
+}
+.timer-ring.warning {
+  --timer-fill: #fda4af;
+  transform: scale(1.15);
+  box-shadow: 0 0 14px rgba(253, 164, 175, 0.55);
+  animation: timer-warn-blink 0.8s ease-in-out infinite;
+}
+.timer-ring.warning .timer-value {
+  color: #fecdd3;
+}
+@keyframes timer-warn-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.72; }
 }
 .timer-ring.expired {
-  background: conic-gradient(var(--neg-1) 360deg, transparent 0);
+  --timer-fill: var(--neg-1);
   animation: m-blink 0.6s infinite;
 }
 
@@ -251,144 +288,131 @@
   margin: 0 2px;
 }
 
-/* -------------------------- Wild build hint (§3-3) -------------------------- */
+/* -------------------------- Recommended combo panel -------------------------- */
 
-.wild-hint {
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(200, 85, 240, 0.15), rgba(120, 55, 200, 0.08));
-  border: 1px solid rgba(200, 85, 240, 0.32);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+/* -------------------------- Recommended combo row -------------------------- */
 
-.wild-build {
-  padding: 11px 12px;
-  border-radius: 13px;
-  background: rgba(200, 85, 240, 0.1);
-  border: 1px solid rgba(200, 85, 240, 0.3);
-  color: #fff;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  text-align: left;
-}
-.wild-build:active {
-  transform: scale(0.98);
-}
-.wild-build-label {
-  color: #e0b6ff;
-  font-family: var(--font-brand);
-  font-size: 10.5px;
-  font-weight: 700;
-}
-.wild-build-cards {
+.tip-row {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 6px;
+  flex-wrap: wrap;
+  padding: 2px 0;
 }
-.wild-build-card {
-  width: 32px;
-  height: 44px;
-  border-radius: 7px;
-  background: #fff;
+.tip-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(242, 193, 78, 0.28), rgba(242, 193, 78, 0.1));
+  border: 1px solid rgba(242, 193, 78, 0.44);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(242, 193, 78, 0.22);
+  line-height: 1;
+  font-family: var(--font-brand);
+  font-weight: 700;
+  font-size: 11.5px;
+}
+.tip-top:active {
+  transform: scale(0.97);
+}
+.tip-top.with-wild {
+  background: linear-gradient(135deg, rgba(200, 85, 240, 0.28), rgba(200, 85, 240, 0.12));
+  border-color: rgba(200, 85, 240, 0.5);
+  box-shadow: 0 0 12px rgba(200, 85, 240, 0.28);
+}
+.tip-top-label {
+  color: #f8d98a;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.tip-top.with-wild .tip-top-label {
+  color: #e0b6ff;
+}
+.tip-top-label b {
+  color: #fff;
+  font-family: var(--font-brand);
+  font-weight: 900;
+  font-size: 14px;
+}
+.tip-top-x {
+  color: #f8d98a;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 11.5px;
+}
+.tip-top.with-wild .tip-top-x {
+  color: #e0b6ff;
+}
+.tip-top-cards {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.tip-mini {
+  width: 18px;
+  height: 24px;
+  border-radius: 4px;
+  background: #fdfcff;
   color: #2a2350;
   font-family: var(--font-brand);
   font-weight: 800;
-  font-size: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-.wild-build-card.wild {
-  background: linear-gradient(160deg, #3a2f60, #241d44);
-  border: 1.5px solid var(--brand-purple-2);
-  color: #e0b6ff;
-  box-shadow: 0 0 12px rgba(200, 85, 240, 0.45);
-  flex-direction: column;
-  gap: 1px;
-}
-.wild-build-eq {
-  font-size: 7px;
-  line-height: 1;
-  opacity: 0.85;
-}
-.wild-build-plus {
-  color: #6b6490;
-  font-family: var(--font-brand);
-  font-weight: 800;
-  font-size: 15px;
-}
-
-.wild-hint-alts {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.wild-hint-alts-label {
-  color: var(--text-4);
-  font-size: 9.5px;
-  font-weight: 700;
-}
-.wild-hint-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-.wild-hint-eyebrow {
-  color: #e0b6ff;
-  font-family: var(--font-brand);
-  font-weight: 800;
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-}
-.wild-hint-sub {
-  color: var(--text-4);
-  font-size: 9.5px;
-  font-weight: 700;
-}
-.wild-hint-list {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.wild-hint-chip {
+  font-size: 11px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
+  justify-content: center;
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.55);
+  flex: none;
+}
+.tip-mini.wild {
+  background: linear-gradient(160deg, #3a2f60, #241d44);
+  border: 1px solid var(--brand-purple-2);
+  color: #e0b6ff;
+  box-shadow: 0 0 6px rgba(200, 85, 240, 0.5);
+}
+.tip-alt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 13px;
   border-radius: 999px;
-  background: rgba(200, 85, 240, 0.16);
-  border: 1px solid rgba(200, 85, 240, 0.36);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   color: #fff;
   cursor: pointer;
   font-family: var(--font-brand);
-  font-weight: 700;
-  font-size: 11px;
-}
-.wild-hint-chip:active {
-  transform: scale(0.97);
-}
-.wild-hint-lead {
-  color: #fff;
   font-weight: 800;
+  font-size: 13px;
+  line-height: 1;
 }
-.wild-hint-tail {
+.tip-alt:active {
+  transform: scale(0.96);
+}
+.tip-alt.with-wild {
+  background: rgba(200, 85, 240, 0.16);
+  border-color: rgba(200, 85, 240, 0.36);
+}
+.tip-alt-x {
+  color: var(--text-3);
+  font-size: 11.5px;
+  margin-left: 2px;
+}
+.tip-alt-wild {
   color: #e0b6ff;
-  font-size: 10px;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: 11px;
+  margin-left: 4px;
 }
 
 /* -------------------------- Pile -------------------------- */
 
 .pile-empty {
-  border-radius: 20px;
-  padding: 32px 18px;
+  border-radius: 18px;
+  padding: 18px 16px;
   border: 1.5px dashed var(--accent-border);
   background:
     radial-gradient(70% 100% at 50% 100%, rgba(242, 193, 78, 0.12), transparent 70%),
@@ -398,8 +422,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 180px;
+  gap: 6px;
   position: relative;
 }
 .pile-empty-icon {
@@ -557,11 +580,14 @@
 /* Reserved slot — always occupies the sel-pill height so tapping a
  * card doesn't shift the whole layout. */
 .sel-slot {
-  min-height: 44px;
+  min-height: 0;
   display: flex;
   align-items: center;
 }
 .sel-slot:empty {
+  min-height: 0;
+}
+.sel-slot:not(:empty) {
   min-height: 44px;
 }
 .sel-slot > * {
@@ -607,10 +633,50 @@
   align-items: center;
   justify-content: space-between;
 }
+.waiting-band {
+  margin-top: auto;
+  margin-bottom: 4px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(127, 176, 232, 0.1);
+  border: 1px solid rgba(127, 176, 232, 0.28);
+  color: #cfe4ff;
+  font-size: 11.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body);
+}
+.waiting-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #7fb0e8;
+  box-shadow: 0 0 8px rgba(127, 176, 232, 0.7);
+  animation: m-blink 1s infinite;
+  flex: none;
+}
+.waiting-name {
+  color: #fff;
+  font-weight: 800;
+  font-family: var(--font-brand);
+}
+.waiting-label {
+  color: var(--text-4);
+}
+.hand-strip.waiting {
+  opacity: 0.6;
+  filter: grayscale(0.35);
+  pointer-events: none;
+}
 .hand-label {
   color: var(--text-5);
   font-size: 11px;
   font-weight: 600;
+  margin-top: auto;
+}
+.waiting-band + .hand-label {
+  margin-top: 4px;
 }
 .hand-label b {
   color: var(--text-2);
@@ -660,16 +726,19 @@
 .hand-card[data-selected="true"] {
   background: linear-gradient(160deg, #fff, #ffe6a0);
   outline: 2px solid var(--accent-1);
-  outline-offset: 1px;
-  box-shadow: 0 6px 14px -4px var(--accent-glow);
-  transform: translateY(-6px);
+  outline-offset: -1px;
+  box-shadow: 0 8px 18px -4px var(--accent-glow),
+    0 0 0 3px rgba(242, 193, 78, 0.28);
+  transform: translateY(-6px) scale(1.12);
   z-index: 2;
 }
 .hand-card[data-tone="wild"][data-selected="true"] {
   background: linear-gradient(160deg, #4a3b8a, #251f52);
   outline: 2px solid var(--brand-purple-2);
-  outline-offset: 1px;
-  box-shadow: 0 6px 14px -4px rgba(200, 85, 240, 0.55);
+  outline-offset: -1px;
+  box-shadow: 0 8px 18px -4px rgba(200, 85, 240, 0.6),
+    0 0 0 3px rgba(200, 85, 240, 0.32);
+  transform: translateY(-6px) scale(1.12);
 }
 .hand-card[data-disabled="true"] {
   background: #8f8aa8;
@@ -724,51 +793,41 @@
   }
 }
 
-/* Pass banner — full-frame overlay when I press 패스. Matches §3-4. */
+/* Pass banner — inline strip on the play board, not a modal. */
 .pass-banner {
-  position: absolute;
-  inset: 0;
-  z-index: 30;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 40px 32px;
-  background: linear-gradient(180deg, rgba(6, 4, 15, 0.72), rgba(6, 4, 15, 0.88));
-  backdrop-filter: blur(6px);
-  animation: pass-banner-in 0.34s var(--easing);
-  pointer-events: none;
+  gap: 11px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(253, 164, 175, 0.2), rgba(253, 164, 175, 0.05));
+  border: 1px solid rgba(253, 164, 175, 0.35);
+  animation: pass-banner-in 0.24s var(--easing);
 }
 .pass-banner-emoji {
-  font-size: 60px;
+  font-size: 22px;
+  flex: none;
+}
+.pass-banner-body {
+  min-width: 0;
+  flex: 1;
 }
 .pass-banner-title {
   color: #fecdd3;
   font-family: var(--font-brand);
-  font-weight: 900;
-  font-size: 26px;
-  letter-spacing: -0.01em;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.1;
 }
 .pass-banner-sub {
-  color: var(--text-2);
-  font-size: 12.5px;
-  text-align: center;
-  line-height: 1.6;
-  max-width: 260px;
+  color: var(--text-4);
+  font-size: 11px;
+  margin-top: 3px;
+  line-height: 1.4;
 }
 @keyframes pass-banner-in {
-  0% {
-    opacity: 0;
-    transform: scale(0.94);
-  }
-  50% {
-    transform: scale(1.02);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
 }
 
 .action-bar {

@@ -9,8 +9,8 @@ body,
 #root {
   margin: 0;
   padding: 0;
-  height: 100dvh;
-  max-height: 100dvh;
+  height: 100svh;
+  max-height: 100svh;
   overscroll-behavior: none;
   overflow: hidden;
 }
@@ -19,7 +19,7 @@ html {
    * All screen-sized primitives read this so layout follows viewport ratio. */
   --phone-scale: clamp(1, calc((100vw - 40px) / 280), 1.5);
   --phone-width: min(calc(100vw - 32px), 460px);
-  --frame-h: min(calc(100dvh - 64px), 812px);
+  --frame-h: min(calc(100svh - 64px), 812px);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -28,15 +28,15 @@ body {
   color: var(--text-1);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
-  height: 100dvh;
+  height: 100svh;
   overflow: hidden;
 }
 #root {
-  height: 100dvh;
+  height: 100svh;
 }
 .route-swap {
   animation: m-fade-in var(--dur-med) var(--easing) both;
-  height: 100dvh;
+  height: 100svh;
   display: flex;
   flex-direction: column;
 }

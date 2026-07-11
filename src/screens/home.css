@@ -103,39 +103,54 @@
 /* -------------------------- Profile pill -------------------------- */
 
 .home-profile {
-  margin-top: auto;
-  padding: 10px 14px;
+  position: absolute;
+  top: calc(10px + env(safe-area-inset-top));
+  right: 12px;
+  z-index: 20;
+  padding: 4px 8px 4px 4px;
   border-radius: 999px;
-  background: var(--glass-2);
+  background: var(--glass-3);
   border: 1px solid var(--glass-border-2);
   display: flex;
   align-items: center;
-  gap: 10px;
-  width: 100%;
-  max-width: 360px;
+  gap: 6px;
+  max-width: 160px;
   color: inherit;
   cursor: pointer;
   font: inherit;
   text-align: left;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.35);
 }
 .home-profile:active {
-  transform: scale(0.98);
+  transform: scale(0.96);
+}
+.home-profile .seat-avatar {
+  width: 22px;
+  height: 22px;
+  font-size: 10px;
 }
 .home-name {
   color: var(--text-2);
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
-  min-width: 0;
+  max-width: 90px;
 }
 .home-name-edit {
-  color: var(--text-5);
-  font-size: 10.5px;
-  font-weight: 700;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-4);
+  font-size: 9.5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: none;
+  line-height: 1;
 }
 .avatar-brand {
   width: 28px;

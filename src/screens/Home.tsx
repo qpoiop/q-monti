@@ -7,6 +7,7 @@ import { DesktopStage } from "./DesktopStage";
 import { Aurora } from "@web/design/effects/Aurora";
 import { Particles } from "@web/design/effects/Particles";
 import { openRules } from "./RulesSheet";
+import { openPolicies } from "./PoliciesSheet";
 import { Stack } from "@web/design/layout";
 import "./home.css";
 
@@ -24,6 +25,20 @@ export function HomeScreen() {
       <PhoneFrame gradient="radial-gradient(85% 46% at 50% 8%, rgba(242,193,78,.3), transparent 60%)">
         <Aurora tone="gold" />
         <Particles variant="gold-shimmer" density={0.9} />
+        <button
+          type="button"
+          className="home-profile"
+          onClick={() => {
+            setDraft(displayName);
+            setEditing(true);
+          }}
+        >
+          <span className="seat-avatar avatar-brand">
+            {(displayName[0] || "?").toUpperCase()}
+          </span>
+          <span className="home-name">{displayName}</span>
+          <span className="home-name-edit" aria-label="닉네임 변경" title="닉네임 변경">✎</span>
+        </button>
         <div className="home-body">
           <div className="home-hero">
             <div className="home-logo" aria-label="모몬티">
@@ -57,17 +72,10 @@ export function HomeScreen() {
           </Stack>
           <button
             type="button"
-            className="home-profile"
-            onClick={() => {
-              setDraft(displayName);
-              setEditing(true);
-            }}
+            className="home-policies-link"
+            onClick={() => openPolicies()}
           >
-            <span className="seat-avatar avatar-brand">
-              {(displayName[0] || "?").toUpperCase()}
-            </span>
-            <span className="home-name">{displayName}</span>
-            <span className="home-name-edit">✎ 변경</span>
+            🔒 개인정보는 서버에 저장되지 않아요 · 이용 안내
           </button>
         </div>
       </PhoneFrame>

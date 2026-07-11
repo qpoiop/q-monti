@@ -1,0 +1,45 @@
+.countdown-ring {
+  position: relative;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--cr-fill, var(--accent-1)) calc(var(--cr-pct, 1) * 360deg),
+    rgba(255, 255, 255, 0.08) 0
+  );
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.4));
+}
+.countdown-ring::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  border-radius: 50%;
+  background: var(--surface-2, #1a1330);
+  transform: translate(-50%, -50%);
+}
+.countdown-ring-inner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  pointer-events: none;
+  line-height: 1;
+}
+.countdown-ring.tone-brand {
+  --cr-fill: var(--brand-purple-2);
+}
+.countdown-ring.tone-gold {
+  --cr-fill: var(--accent-1);
+}
+.countdown-ring.tone-danger {
+  --cr-fill: #fda4af;
+}
